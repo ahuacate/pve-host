@@ -83,10 +83,7 @@ Optional - Install and configure Fail2ban
 wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_setup_fail2ban.sh
 ```
 
-
-
-[[_TOC_]]
-
+ [[_TOC_]]
 
 
 # Preparing your Hardware
