@@ -85,7 +85,7 @@ wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scr
 
 
 
-[toc]
+[[_TOC_]]
 
 
 
