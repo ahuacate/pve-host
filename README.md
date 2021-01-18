@@ -1,7 +1,3 @@
----
-
----
-
 # PVE Host Build
 
 This guide is for building and configuring PVE hardware.
@@ -89,7 +85,9 @@ wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scr
 
 
 
-[TOC]
+[[TOC]]
+
+
 
 # Preparing your Hardware
 
