@@ -83,8 +83,9 @@ Optional - Install and configure Fail2ban
 wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_setup_fail2ban.sh
 ```
 
-[TOC]
 
+
+[TOC]
 # Preparing your Hardware
 
 PVE hosts can be built using any x86 hardware with a few conditions. Always use Intel NIC devices (clones seem to be okay too) . And only use enterprise grade SSD drives when creating ZFS Cache builds.
