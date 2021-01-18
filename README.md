@@ -84,9 +84,8 @@ wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scr
 ```
 
 
-
-[TOC]
-
+* TOC
+{:toc}
 
 
 # Preparing your Hardware
