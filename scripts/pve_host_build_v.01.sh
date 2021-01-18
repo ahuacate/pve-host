@@ -126,22 +126,22 @@ fi
 SECTION_HEAD="Proxmox PVE Host Build & Configure"
 
 # Download external scripts
-wget -qLO - https://raw.githubusercontent.com/ahuacate/proxmox-node/master/scripts/pve_add_nfs_mounts.sh
-wget -qLO - https://raw.githubusercontent.com/ahuacate/proxmox-node/master/scripts/pve_add_cifs_mounts.sh
-wget -qLO - https://raw.githubusercontent.com/ahuacate/proxmox-node/master/scripts/pve_setup_postfix.sh
-wget -qLO - https://raw.githubusercontent.com/ahuacate/proxmox-node/master/scripts/pve_setup_sshkey.sh
-wget -qLO - https://raw.githubusercontent.com/ahuacate/proxmox-node/master/scripts/pve_setup_fail2ban.sh
+wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_add_nfs_mounts.sh
+wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_add_cifs_mounts.sh
+wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_setup_postfix.sh
+wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_setup_sshkey.sh
+wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_setup_fail2ban.sh
 
 
 #########################################################################################
 # This script is for building and configuring your Proxmox Hosts                        #
-#                                                                 						          #
+#                                                                                       #
 # Tested on Proxmox Version : pve-manager/6.1-3/37248ce6 (running kernel: 5.3.10-1-pve) #
 #########################################################################################
 
 
 # Command to run script
-#bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/proxmox-node/master/scripts/pve_host_build_v.01.sh)"
+#bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_host_build_v.01.sh)"
 
 # Clear the screen
 clear

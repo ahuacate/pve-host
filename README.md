@@ -28,11 +28,11 @@ The Easy Script will prompt the installer with options:
 Network prerequisites are:
 
 - [x] Layer 2/3 Network Switches
-- [x] Network Gateway is `192.168.1.5` ( *preferred only* )
-- [x] Network DHCP server is `192.168.1.5` ( *preferred only* )
+- [x] Network Gateway is `XXX.XXX.XXX.5` ( *default is 192.168.1.5* )
+- [x] Network DHCP server is `XXX.XXX.XXX.5` ( *default is 192.168.1.5* )
 - [x] Internet access for the PVE host
 
-- [x] File server or NAS (i.e NAS-01) . Our default NAS IPv4 address is `XXX.XXX.XXX.10` ( *suggested IP 192.168.1.10* )
+- [x] File server or NAS (i.e NAS-01) . Our default NAS IPv4 address is `XXX.XXX.XXX.10` ( *default is 192.168.1.10* )
 - [x] File server or NAS is configured with network shares, either CIFS or NFS, as per these [instructions](https://github.com/ahuacate/synobuild) and guides.
 
 Other prerequisites (information the installer should have readily available before starting):
@@ -50,40 +50,42 @@ Easy Scripts are based on bash scripting. Simply `Cut & Paste` the command into 
 Easy Script - Here is the main installation Easy Script which includes all options.
 
 ```bash
-
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_host_build_v.01.sh)"
 ```
 
 Optional - Add PVE NFS Storage Mounts
 
 ```bash
-
+wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_add_nfs_mounts.sh
 ```
 
 Optional - Add PVE CIFS Storage Mounts
 
 ```bash
-
+wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_add_cifs_mounts.sh
 ```
 
 Optional - Install and configure Postfix and email alerts
 
 ```bash
-
+wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_setup_postfix.sh
 ```
 
 Optional - Configuring SSH Authorized Keys
 
 ```bash
-
+wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_setup_sshkey.sh
 ```
 
 Optional - Install and configure Fail2ban
 
 ```bash
-
+wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_setup_fail2ban.sh
 ```
 
 
+
+[TOC]
 
 # Preparing your Hardware
 
@@ -753,7 +755,7 @@ On completion you will see on your CLI terminal words **"Success"** and your PVE
 
 # Other PVE Host Stuff
 
-## 1.00 Create a Proxmox VE Cluster
+## 1.00 Create a PVE Cluster
 
 Proxmox requires a  minimum of three PVE hosts on the same network to form a cluster - PVE-01, PVE-02 and PVE-03.
 
