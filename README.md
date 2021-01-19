@@ -120,6 +120,7 @@ bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build
 
 <hr>
 
+
 # 1. Preparing your Hardware
 
 PVE hosts can be built using any x86 hardware with a few conditions. Always use Intel NIC devices (clones seem to be okay too) . And only use enterprise grade SSD drives when creating ZFS Cache builds.
