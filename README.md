@@ -1,4 +1,4 @@
-<H1>PVE Host Build</H1>
+<H1>PVE Host Setup</H1>
 
 This guide is for building and configuring PVE hardware.
 
