@@ -65,7 +65,7 @@ Easy Scripts are based on bash scripting. Simply `Cut & Paste` our Easy Script c
 This Easy Script is for primary and secondary PVE hosts. It gives the installer options to run our option add-ons to full configure your PVE hosts.
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_host_build.sh)"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup.sh)"
 ```
 **Add-on** (optional)
 Optional Add-on Easy Scripts can be run anytime. They are for adding new PVE NAS storage mounts, installing Postfix email alerts and other services.
@@ -73,31 +73,31 @@ Optional Add-on Easy Scripts can be run anytime. They are for adding new PVE NAS
 Add-on - Add PVE NFS Storage Mounts
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_add_nfs_mounts.sh"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_add_nfs_mounts.sh"
 ```
 
 Add-on - Add PVE CIFS Storage Mounts
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_add_cifs_mounts.sh"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_add_cifs_mounts.sh"
 ```
 
 Add-on - Install and configure Postfix and email alerts
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_setup_postfix.sh"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_setup_postfix.sh"
 ```
 
 Add-on - Configuring SSH Authorized Keys
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_setup_sshkey.sh"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_setup_sshkey.sh"
 ```
 
 Add-on - Install and configure Fail2ban
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_setup_fail2ban.sh"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_setup_fail2ban.sh"
 ```
 
 <hr>
@@ -900,5 +900,5 @@ The script will start stopped containers, update them and then shut them down in
 To run script:
 
 ```
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/update_all_containers.sh)"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/update_all_containers.sh)"
 ```
