@@ -123,7 +123,7 @@ else
 fi
 
 # Script Variables
-SECTION_HEAD="Proxmox PVE Host Build & Configure"
+SECTION_HEAD="PVE Host Build & Configure"
 
 # Download external scripts
 wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_add_nfs_mounts.sh
@@ -141,7 +141,7 @@ wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scr
 
 
 # Command to run script
-#bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_host_build_v.01.sh)"
+#bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-build/master/scripts/pve_host_build.sh)"
 
 # Clear the screen
 clear
@@ -300,7 +300,7 @@ echo
 if [[ $(grep -qxF 'root:65604:100' /etc/subgid) ]] && [[ $(grep -qxF 'root:100:1' /etc/subgid) ]] && [[ $(grep -qxF 'root:1605:1' /etc/subuid) ]] && [[ $(grep -qxF 'root:1606:1' /etc/subuid) ]] && [[ $(grep -qxF 'root:1607:1' /etc/subuid) ]]; then
   section "$SECTION_HEAD - Unprivileged LXC Containers and file permissions"
   while true; do
-    box_out 'With unprivileged LXC containers you will have issues with UIDs (user id) and' 'GIDs (group id) permissions with bind mounted shared data. With PVE the UIDs' 'and GIDs are mapped to a different number range than on the host machine,' 'usually root (uid 0) became uid 100000, 1 will be 100001 and so on.' '' 'Our default user and groups used on our NAS server, PVE VMs and LXC/CTs are:' '' '  --  GROUP: medialab (gid 65605)' '      USER: media (uid 1605)' '      APPS: Jellyfin, NZBGet, Deluge, Sonarr, Radarr, LazyLibrarian, Flexget' '' '  --  GROUP: homelab (gid 65606)' '      USER: home (uid 1606)' '      APPS: Syncthing, Nextcloud, Unifi, Home Assistant, CCTV' '' '  --  GROUP: privatelab (gid 65607)' '      USER: private (uid 1607)' '      APPS: All things private.' 'The high GID number (group ID) is to cater for a Synology GID creation scheme.' '' 'So we do not get permission and denied access errors to the NAS the fix is to' 'create UID and GID mapping on all PVE hosts. So we need to define two ranges:' '      1. One where the system IDs (i.e root uid 0) of the container can be' '         mapped to an arbitrary range on the host for security reasons.' '      2. And where NAS and notably Synology UID/GIDs above 65536 inside a' '         container can be mapped to the same UID/GIDs on the PVE host.' '' 'The following lines are added:' '' '  --  EDITS TO /etc/subuid' '      root:65604:100' '      root:1605:1' '      root:1606:1' '      root:1607:1' '  --  EDITS TO /etc/subgid' '      root:65604:100' '      root:100:1' '' 'You MUST perform this fix if you want to use any of our VM or CT builds.'
+    box_out 'With unprivileged LXC containers you will have issues with UIDs (user id) and' 'GIDs (group id) permissions with bind mounted shared data. With PVE the UIDs' 'and GIDs are mapped to a different number range than on the host machine,' 'usually root (uid 0) became uid 100000, 1 will be 100001 and so on.' '' 'Our default user and groups used on our NAS server, PVE VMs and LXC/CTs are:' '' '  --  GROUP: medialab (gid 65605)' '      USER: media (uid 1605)' '      APPS: JellyFin, NZBGet, Deluge, Sonarr, Radarr, LazyLibrarian, Flexget' '' '  --  GROUP: homelab (gid 65606)' '      USER: home (uid 1606)' '      APPS: Syncthing, NextCloud, UniFi, Home Assistant, CCTV' '' '  --  GROUP: privatelab (gid 65607)' '      USER: private (uid 1607)' '      APPS: All things private.' 'The high GID number (group ID) is to cater for a Synology GID creation scheme.' '' 'So we do not get permission and denied access errors to the NAS the fix is to' 'create UID and GID mapping on all PVE hosts. So we need to define two ranges:' '      1. One where the system IDs (i.e root uid 0) of the container can be' '         mapped to an arbitrary range on the host for security reasons.' '      2. And where NAS and notably Synology UID/GIDs above 65536 inside a' '         container can be mapped to the same UID/GIDs on the PVE host.' '' 'The following lines are added:' '' '  --  EDITS TO /etc/subuid' '      root:65604:100' '      root:1605:1' '      root:1606:1' '      root:1607:1' '  --  EDITS TO /etc/subgid' '      root:65604:100' '      root:100:1' '' 'You MUST perform this fix if you want to use any of our VM or CT builds.'
     echo
     read -p "Proceed to setup your PVE host UID/GID mapping (RECOMMENDED) [y/n]? " -n 1 -r
     echo
@@ -1159,7 +1159,60 @@ fi
 
 #### Install and Configure SSMTP Email Alerts ####
 if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ]; then
-  section "$SECTION_HEAD - Configuring Postfix and Email Alerts."
+  section "$SECTION_HEAD - Configuring Postfix & Email Alerts."
+
+  box_out '#### PLEASE READ CAREFULLY - POSTFIX & EMAIL ALERTS ####' '' 'Send email alerts about your PVE host to the system’s designated administrator.' 'Be alerted about unwarranted login attempts and other system critical alerts.' 'Proxmox is preinstalled with Postfix SMTP server which we use for sending your' 'PVE nodes critical alerts.' '' 'SMTP is a simple Mail Transfer Agent (MTA) while easy to setup it' 'requires the following prerequisites and credentials:' '' '  --  SMTP SERVER' '      You require a SMTP server that can receive the emails from your machine' '      and send them to the designated administrator. ' '      If you use Gmail SMTP server its best to enable "App Passwords". An "App' '      Password" is a 16-digit passcode that gives an app or device permission' '      to access your Google Account.' '      Or you can use a mailgun.com flex account relay server (Recommended).' '' '  --  REQUIRED SMTP SERVER CREDENTIALS' '      1. Designated administrator email address' '         (i.e your working admin email address)' '      2. SMTP server address' '         (i.e smtp.gmail.com or smtp.mailgun.org)' '      3. SMTP server port' '         (i.e gmail port is 587 and mailgun port is 587)' '      4. SMTP server username' '         (i.e MyEmailAddress@gmail.com or postmaster@sandboxa6ac6.mailgun.org)' '      5. SMTP server default password' '         (i.e your Gmail App Password or mailgun SMTP password)' '' 'If you choose to proceed have your SMTP server credentials available.' 'This script will configure your PVE nodes Postfix SMTP server.'
+  echo
+  while true; do
+    read -p "Install and configure Postfix and email alerts [y/n]?: " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      echo
+      read -p "Do you have your Gmail App or Mailgun credentials ready [y/n]?: " -n 1 -r
+      echo
+      if [[ $REPLY =~ ^[Yy]$ ]]; then
+        msg "Setting up Postfix..."
+        export SETUP_POSTFIX=0 >/dev/null
+        export PARENT_EXEC_PVE_SETUP_POSTFIX=0 >/dev/null
+        export PVE_HOSTNAME >/dev/null
+        chmod +x pve_setup_postfix.sh
+        ./pve_setup_postfix.sh
+        echo
+        break
+      else
+        warn "In the next steps you must have your 16 digit Gmail App Password OR Mailgun\ncredentials ready for input to continue.\nTry again..."
+        echo
+      fi
+    else
+      SETUP_POSTFIX=1 >/dev/null
+      info "You have chosen to skip this step."
+      echo
+      break
+    fi
+    echo
+  done
+  # Activate E-Mail Notification & Email Alerts
+  if [ $SETUP_POSTFIX = 0 ]; then
+    # zfs-zed SW
+    if [ $(dpkg -s zfs-zed >/dev/null 2>&1; echo $?) = 0 ]; then
+      msg "Checking zfs-zed status..."
+      info "zfs-zed status: ${GREEN}active (running).${NC}"
+      echo
+    else
+      msg "Installing zfs-zed..."
+      apt-get install -y zfs-zed >/dev/null
+      if [ $(dpkg -s zfs-zed >/dev/null 2>&1; echo $?) = 0 ]; then
+        info "zfs-zed status: ${GREEN}active (running).${NC}"
+      fi
+      echo
+    fi
+    sed -i 's|#ZED_EMAIL_ADDR.*|ZED_EMAIL_ADDR="root"|g' /etc/zfs/zed.d/zed.rc
+  fi
+fi
+
+#### Activate E-Mail Notification & Email Alerts ####
+if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ] && [ $SETUP_POSTFIX=0 ]; then
+  section "$SECTION_HEAD - Activate E-Mail Notification & Email Alerts."
 
   box_out '#### PLEASE READ CAREFULLY - POSTFIX & EMAIL ALERTS ####' '' 'Send email alerts about your PVE host to the system’s designated administrator.' 'Be alerted about unwarranted login attempts and other system critical alerts.' 'Proxmox is preinstalled with Postfix SMTP server which we use for sending your' 'PVE nodes critical alerts.' '' 'SMTP is a simple Mail Transfer Agent (MTA) while easy to setup it' 'requires the following prerequisites and credentials:' '' '  --  SMTP SERVER' '      You require a SMTP server that can receive the emails from your machine' '      and send them to the designated administrator. ' '      If you use Gmail SMTP server its best to enable "App Passwords". An "App' '      Password" is a 16-digit passcode that gives an app or device permission' '      to access your Google Account.' '      Or you can use a mailgun.com flex account relay server (Recommended).' '' '  --  REQUIRED SMTP SERVER CREDENTIALS' '      1. Designated administrator email address' '         (i.e your working admin email address)' '      2. SMTP server address' '         (i.e smtp.gmail.com or smtp.mailgun.org)' '      3. SMTP server port' '         (i.e gmail port is 587 and mailgun port is 587)' '      4. SMTP server username' '         (i.e MyEmailAddress@gmail.com or postmaster@sandboxa6ac6.mailgun.org)' '      5. SMTP server default password' '         (i.e your Gmail App Password or mailgun SMTP password)' '' 'If you choose to proceed have your SMTP server credentials available.' 'This script will configure your PVE nodes Postfix SMTP server.'
   echo
@@ -1192,6 +1245,8 @@ if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ]; then
     echo
   done
 fi
+
+
 
 ####  Install and Configure SSH Authorised Keys  ####
 if [ $PVE_TYPE = 0 ]; then
