@@ -21,6 +21,7 @@ Our Easy Script will prompt the installer with options:
 - Install Fail2Ban as a intrusion prevention software to protects your PVE host from brute-force attacks
 
 **Prerequisites**
+
 Network prerequisites are:
 - [x] Layer 2/3 Network Switches
 - [x] Network Gateway is `XXX.XXX.XXX.5` ( *default is 192.168.1.5* )
@@ -73,31 +74,31 @@ Optional Add-on Easy Scripts can be run anytime. They are for adding new PVE NAS
 Add-on - Add PVE NFS Storage Mounts
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_add_nfs_mounts.sh"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_add_nfs_mounts.sh"
 ```
 
 Add-on - Add PVE CIFS Storage Mounts
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_add_cifs_mounts.sh"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_add_cifs_mounts.sh"
 ```
 
 Add-on - Install and configure Postfix and email alerts
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_setup_postfix.sh"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_postfix.sh"
 ```
 
 Add-on - Configuring SSH Authorized Keys
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_setup_sshkey.sh"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_sshkey.sh"
 ```
 
 Add-on - Install and configure Fail2ban
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_setup_fail2ban.sh"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_fail2ban.sh"
 ```
 
 <hr>
@@ -475,7 +476,9 @@ You must have a running network accessible File Server (NAS) with NFS and/or CIF
 Your NAS server CIFS or NFS properties must be configured so your PVE host backend can mount these NAS shares automatically.
 
 Your options are:
-**NAS Appliance** - A NAS of any brand or type, Synology, QNap, FreeNAS, Windows or Linux server, available on your network preferably with IPv4 address `XXX.XXX.XXX.10` ( *default is 192.168.1.10* ). The NAS must be installed with Samba and NFSv4.1 services. This guide details what you must to do to setup your NAS NAS File sharing and permissions. 
+
+**NAS Appliance** - A NAS of any brand or type, Synology, QNap, FreeNAS, Windows or Linux server, available on your network preferably with IPv4 address `XXX.XXX.XXX.10` ( *default is 192.168.1.10* ). The NAS must be installed with Samba and NFSv4.1 services. This guide details what you must to do to setup your NAS NAS File sharing and permissions.
+
 **PVE NAS** (ZFS) - A PVE ZFS RaidZ storage pool (backend) can be hosted on PVE-01. Management of the backend storage is by a PVE Ubuntu CT (labelled NAS-01) frontend also hosted on PVE-01. NAS-01 CT is installed with NFSv4.1 and Samba services. Our detailed guide includes an Easy Scripts to setup a [PVE NAS](https://github.com/ahuacate/pve-zfs-nas/blob/master/README.md).
 
 

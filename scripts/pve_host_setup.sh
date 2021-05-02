@@ -1,155 +1,130 @@
 #!/usr/bin/env bash
+# ----------------------------------------------------------------------------------
+# Filename:     pve_host_setup.sh
+# Description:  Source script for setting up Proxmox (PVE) Hosts
+# ----------------------------------------------------------------------------------
 
-set -Eeuo pipefail
-shopt -s expand_aliases
-alias die='EXIT=$? LINE=$LINENO error_exit'
-trap die ERR
-trap cleanup EXIT
-function error_exit() {
-  trap - ERR
-  local DEFAULT='Unknown failure occured.'
-  local REASON="\e[97m${1:-$DEFAULT}\e[39m"
-  local FLAG="\e[91m[ERROR] \e[93m$EXIT@$LINE"
-  msg "$FLAG $REASON"
-  [ ! -z ${CTID-} ] && cleanup_failed
-  exit $EXIT
-}
-function warn() {
-  local REASON="\e[97m$1\e[39m"
-  local FLAG="\e[93m[WARNING]\e[39m"
-  msg "$FLAG $REASON"
-}
-function info() {
-  local REASON="$1"
-  local FLAG="\e[36m[INFO]\e[39m"
-  msg "$FLAG $REASON"
-}
-function msg() {
-  local TEXT="$1"
-  echo -e "$TEXT"
-}
-function section() {
-  local REASON="  \e[97m$1\e[37m"
-  printf -- '-%.0s' {1..100}; echo ""
-  msg "$REASON"
-  printf -- '-%.0s' {1..100}; echo ""
-  echo
-}
-function cleanup_failed() {
-  if [ ! -z ${MOUNT+x} ]; then
-    pct unmount $CTID
-  fi
-  if $(pct status $CTID &>/dev/null); then
-    if [ "$(pct status $CTID | awk '{print $2}')" == "running" ]; then
-      pct stop $CTID
-    fi
-    pct destroy $CTID
-  elif [ "$(pvesm list $STORAGE --vmid $CTID)" != "" ]; then
-    pvesm free $ROOTFS
-  fi
-}
-function pushd () {
-  command pushd "$@" &> /dev/null
-}
-function popd () {
-  command popd "$@" &> /dev/null
-}
-function cleanup() {
-  popd
-  rm -rf $TEMP_DIR
-  unset TEMP_DIR
-}
-function load_module() {
-  if ! $(lsmod | grep -Fq $1); then
-    modprobe $1 &>/dev/null || \
-      die "Failed to load '$1' module."
-  fi
-  MODULES_PATH=/etc/modules
-  if ! $(grep -Fxq "$1" $MODULES_PATH); then
-    echo "$1" >> $MODULES_PATH || \
-      die "Failed to add '$1' module to load at boot."
-  fi
-}
-function box_out() {
-  set +u
-  local s=("$@") b w
-  for l in "${s[@]}"; do
-	((w<${#l})) && { b="$l"; w="${#l}"; }
-  done
-  tput setaf 3
-  echo -e " -${b//?/-}-\n| ${b//?/ } |"
-  for l in "${s[@]}"; do
-	printf '| %s%*s%s |\n' "$(tput setaf 7)" "-$w" "$l" "$(tput setaf 3)"
-  done
-  echo -e "| ${b//?/ } |\n -${b//?/-}-"
-  tput sgr 0
-  set -u
-}
+#---- Bash command to run script ---------------------------------------------------
 
-# Colour
-RED=$'\033[0;31m'
-YELLOW=$'\033[1;33m'
-GREEN=$'\033[0;32m'
-WHITE=$'\033[1;37m'
-NC=$'\033[0m'
-
-# Resize Terminal
-printf '\033[8;40;120t'
-
-# Detect modules and automatically load at boot
-load_module aufs
-load_module overlay
-
-# Set Temp Folder
-if [ -z "${TEMP_DIR+x}" ]; then
-  TEMP_DIR=$(mktemp -d)
-  pushd $TEMP_DIR >/dev/null
-else
-  if [ $(pwd -P) != $TEMP_DIR ]; then
-    cd $TEMP_DIR >/dev/null
-  fi
-fi
-
-# Checking for Internet connectivity
-msg "Checking for internet connectivity..."
-if nc -zw1 google.com 443; then
-  info "Internet connectivity status: ${GREEN}Active${NC}"
-  echo
-else
-  warn "Internet connectivity status: ${RED}Down${NC}\n          Cannot proceed without a internet connection.\n          Fix your PVE hosts internet connection and try again..."
-  echo
-  cleanup
-  exit 0
-fi
-
-# Script Variables
-SECTION_HEAD="PVE Host Build & Configure"
-
-# Download external scripts
-wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_add_nfs_mounts.sh
-wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_add_cifs_mounts.sh
-wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_setup_postfix.sh
-wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_setup_sshkey.sh
-wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_setup_fail2ban.sh
-
-
-#########################################################################################
-# This script is for building and configuring your Proxmox Hosts                        #
-#                                                                                       #
-# Tested on Proxmox Version : pve-manager/6.1-3/37248ce6 (running kernel: 5.3.10-1-pve) #
-#########################################################################################
-
-
-# Command to run script
 #bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup.sh)"
 
-# Clear the screen
+#---- Source -----------------------------------------------------------------------
+
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+PVE_SOURCE="$DIR/../../common/pve/source"
+BASH_SOURCE="$DIR/../../common/bash/source"
+
+#---- Dependencies -----------------------------------------------------------------
+
+# Check for Internet connectivity
+if nc -zw1 google.com 443; then
+  echo
+else
+  echo "Checking for internet connectivity..."
+  echo -e "Internet connectivity status: \033[0;31mDown\033[0m\n\nCannot proceed without a internet connection.\nFix your PVE hosts internet connection and try again..."
+  echo
+  exit 0
+fi
+# Run Bash Header
+source $PVE_SOURCE/pvesource_bash_defaults.sh
+# CIDR to netmask conversion
+cdr2mask ()
+{
+   # Number of args to shift, 255..255, first non-255 byte, zeroes
+   set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 < (8 - ($1 % 8))) & 255 )) 0 0 0
+   [ $1 -gt 1 ] && shift $1 || shift
+   echo ${1-0}.${2-0}.${3-0}.${4-0}
+}
+
+#---- Static Variables -------------------------------------------------------------
+
+# Host IP
+PVE_HOST_IP=$(hostname -i)
+# Easy Script Section Header Body Text
+SECTION_HEAD='PVE Host Setup'
+
+#---- Other Variables --------------------------------------------------------------
+#---- Other Files ------------------------------------------------------------------
+#---- Body -------------------------------------------------------------------------
 clear
-sleep 2
+#---- Performing PVE Host Prerequisites
+section "Performing Prerequisites"
+
+# Update PVE OS
+while true; do
+  msg "Verifying the PVE subscription status of this hardware node..."
+  if [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]') = "notfound" ]; then
+    msg "You do not have a valid Proxmox (PVE) subscription key. You need a valid PVE subscription key to access Proxmox pve-enterprise level update repository. This costs money. ${WHITE}But its not required (for home use).${NC}
+
+    If you have a valid PVE subscription key enter '${WHITE}y${NC}' at the next prompt.
+
+    If you do NOT have a valid PVE subscription key then enter '${WHITE}n${NC}' at the next prompt (RECOMMENDED)."
+    echo
+    read -p "Do you have a valid PVE enterprise subscription key [y/n]? " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      msg "You need to install your Proxmox subscription key before proceeding using the PVE web interface. Take the following steps:
+
+        Go to PVE web interface: ${YELLOW}https://`hostname -i`:8006${NC}
+        Default login username: ${YELLOW}root${NC}
+        Password: ${YELLOW}You must have it.${NC}
+                  
+      The root user password is what you specified during the PVE installation process. This script will exit in 3 seconds. Complete the above tasks and try again..."
+      sleep 3
+      cleanup
+      exit 0
+    else
+      if [ -f "/etc/apt/sources.list.d/pve-enterprise.list" ]; then
+        rm /etc/apt/sources.list.d/pve-enterprise.list > /dev/null
+      fi
+      echo 'deb http://download.proxmox.com/debian/pve buster pve-no-subscription' > /etc/apt/sources.list.d/pve-no-subscription.list
+      #sed -i -r '/^#?deb https:\/\/enterprise.proxmox.com\/debian\/pve buster pve-enterprise/c\#deb https:\/\/enterprise.proxmox.com\/debian\/pve buster pve-enterprise' /etc/apt/sources.list.d/pve-enterprise.list
+      info "PVE subscription status is: ${YELLOW}$(pvesubscription get | grep "status:.*" | awk '{ print $2 }')${NC}\nProceeding with PVE updates and upgrades. No Subscription edition."
+      break
+    fi
+  elif [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]') = "active" ]; then
+    info "PVE subscription status is: ${YELLOW}$(pvesubscription get | grep "status:.*" | awk '{ print $2 }')${NC}\nProceeding with PVE updates and upgrades. Subscription edition."
+    break
+  elif [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]') != "active" ] || [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]') != "notfound" ]; then
+    msg "Cannot validate your PVE subscription key status. Your PVE subscription key may have expired or your PVE host cannot connect to the Proxmox key validation server. You have two choices to solve this problem:"
+    # Set PVE subscription key fix
+    TYPE01="${YELLOW}Key Delete${NC} - Delete any existing PVE subscription key and try again."
+    TYPE02="${YELLOW}Exit${NC} - Exit this script, fix the problem & try again."
+    PS3="Select the steps to be taken (entering numeric) : "
+    msg "Available options:"
+    options=("$TYPE01" "$TYPE02")
+    select menu in "${options[@]}"; do
+      case $menu in
+        "$TYPE01")
+          pvesubscription delete >/dev/null
+          pvesubscription update >/dev/null
+          msg "PVE subscription key has been deleted. Try again..."
+          echo
+          sleep 1
+          ;;
+        "$TYPE02")
+          info "You have chosen to skip this step. Aborting configuration."
+          sleep 1
+          cleanup
+          exit 0
+          ;;
+        *) warn "Invalid entry. Try again.." >&2
+      esac
+    done
+  fi
+done
 echo
 
-#### Performing PVE Host Prerequisites ####
-section "$SECTION_HEAD - Performing Prerequisites"
+msg "Performing PVE update..."
+apt -y update > /dev/null 2>&1
+msg "Performing PVE upgrade..."
+apt -y upgrade > /dev/null 2>&1
+msg "Performing PVE full upgrade (Linux Kernel if required)..."
+apt -y full-upgrade > /dev/null 2>&1
+msg "Performing PVE clean..."
+apt -y clean > /dev/null 2>&1
+msg "Performing PVE autoremove..."
+apt -y autoremove > /dev/null 2>&1
 
 # nbtscan SW
 if [ $(dpkg -s nbtscan >/dev/null 2>&1; echo $?) = 0 ]; then
@@ -179,77 +154,6 @@ else
   echo
 fi
 
-# CIDR to netmask conversion
-cdr2mask ()
-{
-   # Number of args to shift, 255..255, first non-255 byte, zeroes
-   set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 < (8 - ($1 % 8))) & 255 )) 0 0 0
-   [ $1 -gt 1 ] && shift $1 || shift
-   echo ${1-0}.${2-0}.${3-0}.${4-0}
-}
-
-
-# Update PVE OS
-while true; do
-  msg "Verifying the PVE subscription status of this hardware node..."
-  if [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]') = "notfound" ]; then
-    msg "You do not have a valid installed Proxmox (PVE) subscription key. You\nneed a valid PVE subscription key to access Proxmox pve-enterprise level update\nrepository. This costs money. ${WHITE}But its not required (for home use).${NC}\n\nIf you have a valid Proxmox subscription key but have not installed it then its\nbest to do so. Enter '${WHITE}y${NC}' at the next prompt.\n\nIf you do NOT have a valid PVE subscription key then enter '${WHITE}n${NC}' at the\nnext prompt (RECOMMENDED)."
-    echo
-    read -p "Do you have a valid Proxmox enterprise subscription key [y/n]? " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-      msg "You need to install your Proxmox subscription key before proceeding using the\nPVE web interface. Take the following steps:\n\n    PVE web interface: ${YELLOW}https://`hostname -i`:8006${NC}\n    Default login username: ${YELLOW}root${NC}\n    Password: ${YELLOW}You must have it.${NC}\n\nThe root user password is what you specified during the PVE installation process.\n\nThis script will exit in 3 seconds. Complete the above tasks and try again..."
-      sleep 3
-      cleanup
-      exit 0
-    else
-      sed -i -r '/^#?deb https:\/\/enterprise.proxmox.com\/debian\/pve buster pve-enterprise/c\#deb https:\/\/enterprise.proxmox.com\/debian\/pve buster pve-enterprise' /etc/apt/sources.list.d/pve-enterprise.list
-      info "PVE subscription status is: ${YELLOW}$(pvesubscription get | grep "status:.*" | awk '{ print $2 }')${NC}\nProceeding with PVE updates and upgrades. No Subscription edition."
-      break
-    fi
-  elif [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]') = "active" ]; then
-    info "PVE subscription status is: ${YELLOW}$(pvesubscription get | grep "status:.*" | awk '{ print $2 }')${NC}\nProceeding with PVE updates and upgrades. Subscription edition."
-  elif [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]') != "active" ] || [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]') != "notfound" ]; then
-    msg "Cannot validate your Proxmox (PVE) subscription key status. Your PVE\nsubscription key may have expired or your PVE host cannot connect to the Proxmox\nkey validation server. You have two choices to solve this problem:"
-    # Set PVE subscription key fix
-    TYPE01="${YELLOW}Key Delete${NC} - Delete any existing PVE subscription key and try again."
-    TYPE02="${YELLOW}Exit${NC} - Exit this script, fix the problem & try again."
-    PS3="Select the steps to be taken (entering numeric) : "
-    msg "Available options:"
-    options=("$TYPE01" "$TYPE02")
-    select menu in "${options[@]}"; do
-      case $menu in
-        "$TYPE01")
-          pvesubscription delete >/dev/null
-          pvesubscription update >/dev/null
-          msg "PVE scubscription key has been deleted. Try again..."
-          echo
-          sleep 1
-          ;;
-        "$TYPE02")
-          info "You have chosen to skip this step. Aborting configuration."
-          sleep 1
-          cleanup
-          exit 0
-          ;;
-        *) warn "Invalid entry. Try again.." >&2
-      esac
-    done
-  fi
-done
-echo
-
-msg "Performing PVE update..."
-apt -y update > /dev/null 2>&1
-msg "Performing PVE upgrade..."
-apt -y upgrade > /dev/null 2>&1
-msg "Performing PVE full upgrade (Linux Kernel if required)..."
-apt -y full-upgrade > /dev/null 2>&1
-msg "Performing PVE clean..."
-apt -y clean > /dev/null 2>&1
-msg "Performing PVE autoremove..."
-apt -y autoremove > /dev/null 2>&1
-
 # Update turnkey appliance list
 msg "Performing turnkey appliance list updates..."
 pveam update >/dev/null
@@ -276,12 +180,33 @@ else
   echo "fs.inotify.max_user_watches = 8192" >> /etc/sysctl.conf
 fi
 
+# Adjust Swappiness
+if [ $(grep MemTotal /proc/meminfo | awk '{print $2 / 1024 / 1000}' | awk '{print int($1+0.5)}') -ge 16 ]; then
+  msg "Adjusting PVE swappiness value to 10..."
+  sysctl vm.swappiness=10 > /dev/null
+  swapoff -a
+  swapon -a
+fi
+echo
 
 
-#### Introduction ####
-section "$SECTION_HEAD - Introduction."
+#---- Introduction
+section "Introduction."
 
-box_out '#### PLEASE READ CAREFULLY - INTRODUCTION ####' '' 'This script is for configuring your PVE hosts. User input is required.' 'The script will create, edit and/or change system files on your PVE host.' 'When an optional default setting is provided you can accept our' 'default (Recommended) by pressing ENTER on your keyboard. Or overwrite our' 'default value by typing in your own value and then pressing ENTER to' 'accept and to continue to the next step.' '' 'In the next steps you will asked to build, create or configure:' '  --  Configure your PVE host network interface card (NIC).' '  --  Create NFS and/or CIFS backend storage pools for your PVE hosts.' '' '      OPTIONAL TASKS' '  --  Configure PVE mail alerts.' '  --  Install and configure Fail2Ban.'
+msg_box "#### PLEASE READ CAREFULLY - INTRODUCTION ####\n
+This script is for configuring your PVE hosts. User input is required. The script will create, edit and/or change system files on your PVE host. When an optional default setting is provided you can accept our default (Recommended) by pressing ENTER on your keyboard. Or overwrite our default value by typing in your own value and then pressing ENTER to accept and to continue to the next step.
+
+In the next steps you will asked to build, create or configure:
+
+  --  Configure your PVE host network interface card (NIC)
+
+  --  Create NFS and/or CIFS backend storage pools for your PVE hosts.
+
+      OPTIONAL TASKS
+
+  --  Configure PVE mail alerts
+
+  --  Install and configure Fail2Ban."
 
 echo
 read -p "Proceed to setup your PVE host $HOSTNAME [y/n]? " -n 1 -r
@@ -296,13 +221,34 @@ else
 fi
 echo
 
-#### PVE Container Mapping ####
-if [[ $(grep -qxF 'root:65604:100' /etc/subgid) ]] && [[ $(grep -qxF 'root:100:1' /etc/subgid) ]] && [[ $(grep -qxF 'root:1605:1' /etc/subuid) ]] && [[ $(grep -qxF 'root:1606:1' /etc/subuid) ]] && [[ $(grep -qxF 'root:1607:1' /etc/subuid) ]]; then
-  section "$SECTION_HEAD - Unprivileged LXC Containers and file permissions"
+# PVE Container Mapping
+if [[ ! $(grep -qxF 'root:65604:100' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:100:1' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:1605:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1606:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1607:1' /etc/subuid) ]]; then
+  section "Unprivileged LXC Containers and file permissions"
   while true; do
-    box_out 'With unprivileged LXC containers you will have issues with UIDs (user id) and' 'GIDs (group id) permissions with bind mounted shared data. With PVE the UIDs' 'and GIDs are mapped to a different number range than on the host machine,' 'usually root (uid 0) became uid 100000, 1 will be 100001 and so on.' '' 'Our default user and groups used on our NAS server, PVE VMs and LXC/CTs are:' '' '  --  GROUP: medialab (gid 65605)' '      USER: media (uid 1605)' '      APPS: JellyFin, NZBGet, Deluge, Sonarr, Radarr, LazyLibrarian, Flexget' '' '  --  GROUP: homelab (gid 65606)' '      USER: home (uid 1606)' '      APPS: Syncthing, NextCloud, UniFi, Home Assistant, CCTV' '' '  --  GROUP: privatelab (gid 65607)' '      USER: private (uid 1607)' '      APPS: All things private.' 'The high GID number (group ID) is to cater for a Synology GID creation scheme.' '' 'So we do not get permission and denied access errors to the NAS the fix is to' 'create UID and GID mapping on all PVE hosts. So we need to define two ranges:' '      1. One where the system IDs (i.e root uid 0) of the container can be' '         mapped to an arbitrary range on the host for security reasons.' '      2. And where NAS and notably Synology UID/GIDs above 65536 inside a' '         container can be mapped to the same UID/GIDs on the PVE host.' '' 'The following lines are added:' '' '  --  EDITS TO /etc/subuid' '      root:65604:100' '      root:1605:1' '      root:1606:1' '      root:1607:1' '  --  EDITS TO /etc/subgid' '      root:65604:100' '      root:100:1' '' 'You MUST perform this fix if you want to use any of our VM or CT builds.'
+    msg_box "With unprivileged LXC containers you will have issues with UIDs (User ID) and GIDs (Group ID) permissions with bind mounted shared data. With PVE the UIDs and GIDs are mapped to a different number range than on the host machine,usually root (uid 0) became uid 100000, 1 will be 100001 and so on. Our default User and Groups used on our NAS server, PVE VMs and LXC/CTs are:
+
+      --  GROUP: medialab (gid 65605) > USER: media (uid 1605) > APPS: JellyFin, NZBGet, Deluge, Sonarr, Radarr, LazyLibrarian, Flexget
+
+      --  GROUP: homelab (gid 65606) > USER: home (uid 1606) > APPS: Syncthing, NextCloud, UniFi, Home Assistant, CCTV
+
+      --  GROUP: privatelab (gid 65607) > USER: private (uid 1607) > APPS: All things private.
+      
+    Our high GID number (Group ID) is to cater for a Synology GID creation scheme. To maintain user permissions and rights to our NAS the fix is to create UID and GID mapping on all PVE hosts. We need to define two ranges:
+      
+      1. One where the system IDs (i.e root uid 0) of the container can be mapped to an arbitrary range on the host for security reasons.
+      
+      2. And where NAS and notably Synology UID/GIDs above 65536 inside a container can be mapped to the same UID/GIDs on the PVE host.
+      
+      The following lines are added:
+      
+        --  EDITS TO /etc/subuid
+            root:65604:100 root:1605:1 root:1606:1 root:1607:1
+        --  EDITS TO /etc/subgid
+            root:65604:100 root:100:1
+
+    You MUST perform this fix if you want to use any of our VM or CT builds."
     echo
-    read -p "Proceed to setup your PVE host UID/GID mapping (RECOMMENDED) [y/n]? " -n 1 -r
+    read -p "Proceed to create your PVE host UID/GID mapping (RECOMMENDED) [y/n]? " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
       msg "Performing UID & GID host mapping..."
@@ -334,10 +280,31 @@ if [[ $(grep -qxF 'root:65604:100' /etc/subgid) ]] && [[ $(grep -qxF 'root:100:1
   done
 fi
 
-#### Setting PVE Host Variables ####
-section "$SECTION_HEAD - Setting Variables"
+#---- Setting PVE Host Variables
+section "Setting Variables"
 
-box_out '#### PLEASE READ CAREFULLY - PVE BUILD TYPE ####' '' 'We need to determine the type of PVE host you are building. There are two' 'types of PVE builds:' '' '      PRIMARY TYPE' '  --  Primary PVE host is your first Proxmox machine.' '  --  Primary PVE hostnames are denoted by "-01".' '  --  Default hostname is pve-01.' '  --  Default primary host IPv4 address is 192.168.1.101.' '' '      SECONDARY TYPE' '  --  Secondary PVE hosts are cluster machines.' '  --  Proxmox requires a minimum of 3x PVE hosts to form a cluster.' '  --  Secondary PVE hostnames are denoted by "-02" onwards.' '  --  Default hostname naming convention begins from pve-02 (i.e 03,0x).' '  --  Default secondary host IPv4 addresses begin from 192.168.1.102.'
+msg_box "#### PLEASE READ CAREFULLY - PVE BUILD TYPE ####\n
+We need to determine the type of PVE host you are building. There are two types of PVE builds:
+
+  PRIMARY TYPE
+    --  Primary PVE host is your first Proxmox machine
+
+    --  Primary PVE hostnames are denoted by '-01'
+
+    --  Default hostname is pve-01
+
+    --  Default primary host IPv4 address is 192.168.1.101
+  
+  SECONDARY TYPE
+    --  Secondary PVE hosts are cluster machines
+
+    --  Proxmox requires a minimum of 3x PVE hosts to form a cluster
+
+    --  Secondary PVE hostnames are denoted by '-02' onwards
+
+    --  Default hostname naming convention begins from pve-02 (i.e 03,0x)
+
+    --  Default secondary host IPv4 addresses begin from 192.168.1.102."
 
 # Set PVE Build Type
 TYPE01="${YELLOW}Primary${NC} - Primary PVE host."
@@ -363,9 +330,8 @@ select menu in "${options[@]}"; do
   esac
 done
 
-
 # Network Setup
-msg "You have the option to modify your PVE host network setup.\nYour PVE host machine is installed with the following NICs:"
+msg "You have the option to modify your PVE host network setup. Your PVE host machine is installed with the following NICs:"
 # Show Available NICs
 if [[ $(ip -o link show | awk -F': ' '$0 ~ "eno[0-9]"{print $2}') ]]; then
   msg "      ONBOARD ETHERNET NIC"
@@ -413,7 +379,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   msg "Select the ethernet NICs to enable..."
   msg "Your PVE host has ${WHITE}$(($ENO_CNT+$ENP_CNT))x NICs${NC} ($(echo "$ENO_CNT")x onboard, $(echo "$ENP_CNT")x PCI) available for configuration."
   if [ $(($ENO_CNT+$ENP_CNT)) = 3 ]; then msg "You also have enough NICs to create a single pfSense OpenVPN gateway."; elif [ $(($ENO_CNT+$ENP_CNT)) -ge 4 ]; then msg "You also have enough NICs to create dual pfSense OpenVPN gateways."; fi
-  msg "Now select which ethernet NICs and/or PCI Cards you want to enable.\nWe recommend you select ONLY Intel brand NICs whenever possible."
+  msg "Now select which ethernet NICs and/or PCI Cards you want to enable. We recommend you select ONLY Intel brand NICs whenever possible."
 
   set +Eeuo pipefail #Required BEFORE menu shell script
   menu() {
@@ -475,10 +441,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   # Ethernet Adapter Speeds
   if [[ $(dmesg | grep ixgbe) ]]; then
     msg "Select ethernet NIC speeds..."
-    msg "We need to determine the ethernet speed of your selected integrated onboard\nand/or PCI card network NICs.\nWe have identified your PVE host may have ${WHITE}10GbE ethernet${NC} capability."
+    msg "We need to determine the ethernet speed of your selected integrated onboard and/or PCI card network NICs. We have identified your PVE host may have ${WHITE}10GbE ethernet${NC} capability."
   else
     msg "Select ethernet NIC speeds..."
-    msg "We need to determine the ethernet speed of your selected integrated onboard\nand/or PCI card network NICs."
+    msg "We need to determine the ethernet speed of your selected integrated onboard and/or PCI card network NICs."
   fi
   read -p "Do you have 10GbE/10G/SFP+ ethernet capability [y/n]?: " -n 1 -r
   echo
@@ -757,9 +723,9 @@ else
 fi
 
 
-#### Configuring PVE Host Ethernet ####
+#---- Configuring PVE Host Ethernet
 if [ $PVE_NET = 0 ]; then
-  section "$SECTION_HEAD - Configuring PVE Host Ethernet"
+  section "Configuring PVE Host Ethernet"
 
   # Setting Ethernet VAR
   ETH_10GBE_CNT=$(cat pve_nic_selection_var04 | awk -F' ' '{if($2 == "10GbE"){print}}' | wc -l)
@@ -802,7 +768,7 @@ if [ $PVE_NET = 0 ]; then
           info "Number of bridged 1GbE NICs:\n      --  ${YELLOW}"$ETH_1GBE_CNT"x bond0 (802.3ad) vmbr0${NC}"
         elif [ $ETH_1GBE_CNT -ge 4 ]; then
           info "Number of bridged 1GbE NICs:\n      --  ${YELLOW}4x bond0 (802.3ad) vmbr0${NC}"
-          warn "$(($ETH_1GBE_CNT-4))x 1GbE NICs have been excluded. You can always\nmodify your PVE host network using the PVE management webGUI."
+          warn "$(($ETH_1GBE_CNT-4))x 1GbE NICs have been excluded. You can always modify your PVE host network using the PVE management webGUI."
         fi
       done < <(echo "$ETH_1GBE_LIST")
     elif [ $ETH_10GBE_CNT -eq 1 ] && [ $ETH_1GBE_CNT -ge 0 ]; then
@@ -811,7 +777,7 @@ if [ $PVE_NET = 0 ]; then
         echo "vmbr0 1 1 $line1" >> pve_nic_selection_var05
         info "Number of bridged 10GbE NICs:\n      --  ${YELLOW}"$ETH_10GBE_CNT"x vmbr0${NC}"
         if [ $ETH_1GBE_CNT -ge 1 ]; then
-          warn ""$ETH_1GBE_CNT"x 1GbE NICs have been excluded because they are not required\nwhen 10GbE ethernet is available.\nYou can always modify your PVE host network using the PVE management webGUI."
+          warn ""$ETH_1GBE_CNT"x 1GbE NICs have been excluded because they are not required when 10GbE ethernet is available. You can always modify your PVE host network using the PVE management webGUI."
         fi
       done < <(echo "$ETH_10GBE_LIST")
     elif [ $ETH_10GBE_CNT -ge 2 ] && [ $ETH_1GBE_CNT -ge 0 ]; then
@@ -821,7 +787,7 @@ if [ $PVE_NET = 0 ]; then
         echo "vmbr0 bond0 802.3ad $line2" >> pve_nic_selection_var05
         info "Number of bridged 10GbE NICs:\n      --  ${YELLOW}2x bond0 (802.3ad) vmbr0${NC}"
         if [ $ETH_10GBE_CNT -ge 3 ] && [ $ETH_1GBE_CNT -ge 1 ]; then
-        warn "$(($ETH_10GBE_CNT-2))x 10GbE NICs have been excluded because they are not required.\n"$ETH_1GBE_CNT"x 1GbE NICs have been excluded because they are not required\nwhen 10GbE ethernet is available.\nYou can always modify your PVE host network using the PVE management webGUI."
+        warn "$(($ETH_10GBE_CNT-2))x 10GbE NICs have been excluded because they are not required. "$ETH_1GBE_CNT"x 1GbE NICs have been excluded because they are not required when 10GbE ethernet is available. You can always modify your PVE host network using the PVE management webGUI."
         fi
       done < <(echo "$ETH_10GBE_LIST")
     fi
@@ -990,9 +956,9 @@ if [ $PVE_NET = 0 ]; then
         echo "vmbr40 1 1 $line4" >> pve_nic_selection_var05
         info "Number of bridged 10GbE NICs:\n      --  ${YELLOW}1x vmbr0${NC}\n      --  ${YELLOW}1x vmbr2${NC}\n      --  ${YELLOW}1x vmbr30${NC}\n      --  ${YELLOW}1x vmbr40${NC}"
         if [ $ETH_10GBE_CNT -ge 5 ] && [ $ETH_1GBE_CNT -eq 0 ]; then
-          warn "$(($ETH_10GBE_CNT-4))x 10GbE NICs have been excluded because they are not required.\nYou can always modify your PVE host network using the PVE management webGUI."
+          warn "$(($ETH_10GBE_CNT-4))x 10GbE NICs have been excluded because they are not required. You can always modify your PVE host network using the PVE management webGUI."
         elif [ $ETH_10GBE_CNT -ge 5 ] && [ $ETH_1GBE_CNT -ge 1 ]; then
-          warn "$(($ETH_10GBE_CNT-4))x 10GbE NICs have been excluded because they are not required.\n"$ETH_1GBE_CNT"x 1GbE NICs have been excluded because they are not required\nwhen 10GbE ethernet is available.\nYou can always modify your PVE host network using the PVE management webGUI."
+          warn "$(($ETH_10GBE_CNT-4))x 10GbE NICs have been excluded because they are not required. "$ETH_1GBE_CNT"x 1GbE NICs have been excluded because they are not required when 10GbE ethernet is available. You can always modify your PVE host network using the PVE management webGUI."
         fi
       done < <(echo "$ETH_10GBE_LIST")
     fi
@@ -1116,17 +1082,29 @@ iface $VAR1 inet manual
 
 EOF
 fi
-done < <(cat pve_nic_selection_input | awk -F' ' '{if($2 == "1"){print}}' | awk '{if (a!=$2) {a=$2; printf "\n%s",$0,FS} else {a=$2; printf " %s",$5 }} END {printf "\n" }' | sed '/^$/d')
+done < <(cat pve_nic_selection_input | awk -F' ' '{if($2 == "1"){print}}' | sed '/^$/d')
 fi
 echo
 fi
 
 
-#### Adding NFS or CIFS Storage Mounts ####
+#---- Adding NFS or CIFS Storage Mounts
 if [ $PVE_TYPE = 0 ]; then
-  section "$SECTION_HEAD - Adding NFS & CIFS Storage Mounts"
+  section "Adding NFS & CIFS Storage Mounts"
 
-  box_out '#### PLEASE READ CAREFULLY - NAS NFS & CIFS SERVER EXPORTS ####' '' 'Proxmox can add storage by creating NFS and/or CIFS backend storage pools.' 'Your NAS server NFS/CIFS properties must be configured so your PVE NFS/CIFS' 'backend (client) can mount the NAS shares automatically. Your NAS server' 'should support:' '' '  NFS VERSION' '  --  NFS v3/v4.' '  --  NAS NFS exports to all PVE nodes (i.e 192.168.1.101-192.168.1.109).' '  CIFS VERSION' '  --  SMB3 (SMB1 is NOT supported).' '  --  NAS CIFS shares to all PVE nodes (i.e 192.168.1.101-192.168.1.109).' '' 'We need to set some variables. The next steps requires your input. You can' 'accept our default values by pressing ENTER on your keyboard. Or overwrite our' 'default value by typing in your own value and then pressing ENTER to' 'accept and to continue to the next step.'
+  msg_box "#### PLEASE READ CAREFULLY - NAS NFS & CIFS SERVER EXPORTS ####\n
+  Proxmox can add storage by creating NFS and/or CIFS backend storage pools. Your NAS server NFS/CIFS properties must be configured so your PVE NFS/CIFS backend (client) can mount the NAS shares automatically. Your NAS server should support:
+
+    NFS VERSION
+      --  NFS v3/v4
+    
+      --  NAS NFS exports to all PVE nodes (i.e 192.168.1.101-192.168.1.109)
+    CIFS VERSION
+      --  SMB3 (SMB1 is NOT supported)
+      
+      --  NAS CIFS shares to all PVE nodes (i.e 192.168.1.101-192.168.1.109)
+
+  We need to set some variables. The next steps requires your input. You can accept our default values by pressing ENTER on your keyboard. Or overwrite our default value by typing in your own value and then pressing ENTER to accept and to continue to the next step."
   echo
   read -p "Create PVE NFS storage mounts [y/n]?: " -n 1 -r
   echo
@@ -1134,8 +1112,7 @@ if [ $PVE_TYPE = 0 ]; then
     export ADD_NFS_MOUNTS=0 >/dev/null
     export PARENT_EXEC_PVE_ADD_NFS_MOUNTS=0 >/dev/null
     export PVE_HOSTNAME >/dev/null
-    chmod +x pve_add_nfs_mounts.sh
-    ./pve_add_nfs_mounts.sh
+    source $DIR/pve_host_add_nfs_mounts.sh
   else
     ADD_NFS_MOUNTS=1 >/dev/null
     info "You have chosen to skip this step."
@@ -1148,8 +1125,7 @@ if [ $PVE_TYPE = 0 ]; then
     export ADD_CIFS_MOUNTS=0 >/dev/null
     export PARENT_EXEC_PVE_ADD_CIFS_MOUNTS=0 >/dev/null
     export PVE_HOSTNAME >/dev/null
-    chmod +x pve_add_cifs_mounts.sh
-    ./pve_add_cifs_mounts.sh
+    source $DIR/pve_host_add_cifs_mounts.sh
   else
     ADD_CIFS_MOUNTS=1 >/dev/null
     info "You have chosen to skip this step."
@@ -1157,11 +1133,29 @@ if [ $PVE_TYPE = 0 ]; then
   echo
 fi
 
-#### Install and Configure SSMTP Email Alerts ####
+#---- Install and Configure SSMTP Email Alerts
 if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ]; then
-  section "$SECTION_HEAD - Configuring Postfix & Email Alerts."
+  section "Configuring Postfix & Email Alerts."
 
-  box_out '#### PLEASE READ CAREFULLY - POSTFIX & EMAIL ALERTS ####' '' 'Send email alerts about your PVE host to the system’s designated administrator.' 'Be alerted about unwarranted login attempts and other system critical alerts.' 'Proxmox is preinstalled with Postfix SMTP server which we use for sending your' 'PVE nodes critical alerts.' '' 'SMTP is a simple Mail Transfer Agent (MTA) while easy to setup it' 'requires the following prerequisites and credentials:' '' '  --  SMTP SERVER' '      You require a SMTP server that can receive the emails from your machine' '      and send them to the designated administrator. ' '      If you use Gmail SMTP server its best to enable "App Passwords". An "App' '      Password" is a 16-digit passcode that gives an app or device permission' '      to access your Google Account.' '      Or you can use a mailgun.com flex account relay server (Recommended).' '' '  --  REQUIRED SMTP SERVER CREDENTIALS' '      1. Designated administrator email address' '         (i.e your working admin email address)' '      2. SMTP server address' '         (i.e smtp.gmail.com or smtp.mailgun.org)' '      3. SMTP server port' '         (i.e gmail port is 587 and mailgun port is 587)' '      4. SMTP server username' '         (i.e MyEmailAddress@gmail.com or postmaster@sandboxa6ac6.mailgun.org)' '      5. SMTP server default password' '         (i.e your Gmail App Password or mailgun SMTP password)' '' 'If you choose to proceed have your SMTP server credentials available.' 'This script will configure your PVE nodes Postfix SMTP server.'
+  msg_box "#### PLEASE READ CAREFULLY - POSTFIX & EMAIL ALERTS ####\n
+  Send email alerts about your PVE host to the system’s designated administrator. Be alerted about unwarranted login attempts and other system critical alerts. Proxmox is preinstalled with Postfix SMTP server which we use for sending your PVE nodes critical alerts.
+
+  SMTP is a simple Mail Transfer Agent (MTA) while easy to setup it requires the following prerequisites and credentials:
+    --  SMTP SERVER
+        You require a SMTP server that can receive the emails from your machine and send them to the designated administrator. If you use Gmail SMTP server its best to enable 'App Passwords'. An 'App Password' is a 16-digit passcode that gives an app or device permission to access your Google Account. Or you can use a mailgun.com flex account relay server (Recommended).
+
+    --  REQUIRED SMTP SERVER CREDENTIALS
+        1. Designated administrator email address (i.e your working admin email address)
+
+        2. SMTP server address (i.e smtp.gmail.com or smtp.mailgun.org)
+
+        3. SMTP server port (i.e gmail port is 587 and mailgun port is 587)
+
+        4. SMTP server username (i.e MyEmailAddress@gmail.com or postmaster@sandboxa6ac6.mailgun.org)
+
+        5. SMTP server default password (i.e your Gmail App Password or mailgun SMTP password)
+
+  If you choose to proceed have your SMTP server credentials available. This script will configure your PVE nodes Postfix SMTP server."
   echo
   while true; do
     read -p "Install and configure Postfix and email alerts [y/n]?: " -n 1 -r
@@ -1175,12 +1169,11 @@ if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ]; then
         export SETUP_POSTFIX=0 >/dev/null
         export PARENT_EXEC_PVE_SETUP_POSTFIX=0 >/dev/null
         export PVE_HOSTNAME >/dev/null
-        chmod +x pve_setup_postfix.sh
-        ./pve_setup_postfix.sh
+        source $DIR/pve_host_setup_postfix.sh
         echo
         break
       else
-        warn "In the next steps you must have your 16 digit Gmail App Password OR Mailgun\ncredentials ready for input to continue.\nTry again..."
+        warn "In the next steps you must have your 16 digit Gmail App Password OR Mailgun credentials ready for input to continue. Try again..."
         echo
       fi
     else
@@ -1210,11 +1203,30 @@ if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ]; then
   fi
 fi
 
-#### Activate E-Mail Notification & Email Alerts ####
-if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ] && [ $SETUP_POSTFIX=0 ]; then
-  section "$SECTION_HEAD - Activate E-Mail Notification & Email Alerts."
+#---- Activate E-Mail Notification & Email Alerts
+if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ] && [ $SETUP_POSTFIX = 0 ]; then
+  section "Activate E-Mail Notification & Alerts."
 
-  box_out '#### PLEASE READ CAREFULLY - POSTFIX & EMAIL ALERTS ####' '' 'Send email alerts about your PVE host to the system’s designated administrator.' 'Be alerted about unwarranted login attempts and other system critical alerts.' 'Proxmox is preinstalled with Postfix SMTP server which we use for sending your' 'PVE nodes critical alerts.' '' 'SMTP is a simple Mail Transfer Agent (MTA) while easy to setup it' 'requires the following prerequisites and credentials:' '' '  --  SMTP SERVER' '      You require a SMTP server that can receive the emails from your machine' '      and send them to the designated administrator. ' '      If you use Gmail SMTP server its best to enable "App Passwords". An "App' '      Password" is a 16-digit passcode that gives an app or device permission' '      to access your Google Account.' '      Or you can use a mailgun.com flex account relay server (Recommended).' '' '  --  REQUIRED SMTP SERVER CREDENTIALS' '      1. Designated administrator email address' '         (i.e your working admin email address)' '      2. SMTP server address' '         (i.e smtp.gmail.com or smtp.mailgun.org)' '      3. SMTP server port' '         (i.e gmail port is 587 and mailgun port is 587)' '      4. SMTP server username' '         (i.e MyEmailAddress@gmail.com or postmaster@sandboxa6ac6.mailgun.org)' '      5. SMTP server default password' '         (i.e your Gmail App Password or mailgun SMTP password)' '' 'If you choose to proceed have your SMTP server credentials available.' 'This script will configure your PVE nodes Postfix SMTP server.'
+  msg_box "#### PLEASE READ CAREFULLY - POSTFIX & EMAIL ALERTS ####\n
+  Send email alerts about your PVE host to the system’s designated administrator. Be alerted about unwarranted login attempts and other system critical alerts. Proxmox is preinstalled with Postfix SMTP server which we use for sending your PVE nodes critical alerts.
+
+  SMTP is a simple Mail Transfer Agent (MTA) while easy to setup it requires the following prerequisites and credentials:
+
+    --  SMTP SERVER
+        You require a SMTP server that can receive the emails from your machine and send them to the designated administrator. If you use Gmail SMTP server its best to enable 'App Passwords'. An 'App Password' is a 16-digit passcode that gives an app or device permission to access your Google Account. Or you can use a mailgun.com flex account relay server (Recommended).
+        
+    --  REQUIRED SMTP SERVER CREDENTIALS
+        1. Designated administrator email address (i.e your working admin email address)
+
+        2. SMTP server address (i.e smtp.gmail.com or smtp.mailgun.org)
+
+        3. SMTP server port (i.e gmail port is 587 and mailgun port is 587)
+
+        4. SMTP server username (i.e MyEmailAddress@gmail.com or postmaster@sandboxa6ac6.mailgun.org)
+    
+        5. SMTP server default password (i.e your Gmail App Password or mailgun SMTP password)
+
+  If you choose to proceed have your SMTP server credentials available. This script will configure your PVE nodes Postfix SMTP server."
   echo
   while true; do
     read -p "Install and configure Postfix and email alerts [y/n]?: " -n 1 -r
@@ -1228,12 +1240,11 @@ if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ] && [ $SETUP_POSTFIX=0 ]; then
         export SETUP_POSTFIX=0 >/dev/null
         export PARENT_EXEC_PVE_SETUP_POSTFIX=0 >/dev/null
         export PVE_HOSTNAME >/dev/null
-        chmod +x pve_setup_postfix.sh
-        ./pve_setup_postfix.sh
+        source $DIR/pve_host_setup_postfix.sh
         echo
         break
       else
-        warn "In the next steps you must have your 16 digit Gmail App Password OR Mailgun\ncredentials ready for input to continue.\nTry again..."
+        warn "In the next steps you must have your 16 digit Gmail App Password OR Mailgun credentials ready for input to continue. Try again..."
         echo
       fi
     else
@@ -1247,12 +1258,16 @@ if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ] && [ $SETUP_POSTFIX=0 ]; then
 fi
 
 
-
-####  Install and Configure SSH Authorised Keys  ####
+#---- Install and Configure SSH Authorised Keys
 if [ $PVE_TYPE = 0 ]; then
-  section "$SECTION_HEAD - Configuring SSH Authorized Keys."
+  section "Configuring SSH Authorized Keys."
 
-  box_out '#### PLEASE READ CAREFULLY - CONFIGURING SSH AUTHORIZED KEYS ####' '' 'You can use a SSH key for connecting to the PVE root account over SSH.' 'PVE requires all SSH keys to be in the OpenSSH format. Your SSH key choices are:' '' '      1. Append or add your existing SSH Public Key to your PVE hosts' '         authorized keys file.' '      2. Generate a a new set of SSH key pairs.' '' 'If you choose to append your existing SSH Public Key to your PVE host you will' 'be prompted to paste your Public Key into this terminal console. Use your' 'mouse right-click to paste.'
+  msg_box "#### PLEASE READ CAREFULLY - CONFIGURING SSH AUTHORIZED KEYS ####\n
+  You can use a SSH key for connecting to the PVE root account over SSH. PVE requires all SSH keys to be in the OpenSSH format. Your SSH key choices are:
+
+  1. Append or add your existing SSH Public Key to your PVE hosts authorized keys file.
+
+  2. Generate a a new set of SSH key pairs. If you choose to append your existing SSH Public Key to your PVE host you will be prompted to paste your Public Key into this terminal console. Use your mouse right-click to paste."
   echo
   read -p "Configure your PVE host for SSH key access [y/n]?: " -n 1 -r
   echo
@@ -1261,8 +1276,7 @@ if [ $PVE_TYPE = 0 ]; then
     export SETUP_SSHKEY=0 >/dev/null
     export PARENT_EXEC_PVE_SETUP_SSHKEY=0 >/dev/null
     export PVE_HOSTNAME >/dev/null
-    chmod +x pve_setup_sshkey.sh
-    ./pve_setup_sshkey.sh
+    source $DIR/pve_host_setup_sshkey.sh
   else
     SETUP_SSHKEY=1 >/dev/null
     info "You have chosen to skip this step."
@@ -1270,11 +1284,24 @@ if [ $PVE_TYPE = 0 ]; then
   echo
 fi
 
-####  Install and Configure Fail2Ban  ####
+#---- Install and Configure Fail2Ban
 if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ]; then
-  section "$SECTION_HEAD - Install and Configure Fail2Ban."
+  section "Install and Configure Fail2Ban."
 
-  box_out '#### PLEASE READ CAREFULLY - CONFIGURING FAIL2BAN ####' '' 'Fail2Ban is an intrusion prevention software framework that protects computer' 'servers from brute-force attacks.' '' 'Most commonly this is used to block selected IP addresses that may belong to' 'hosts that are trying to breach the systems security. It can ban any host' 'IP address that makes too many login attempts or performs any other unwanted' 'action within a time frame defined by the PVE administrator.' '' 'Our default Fail2ban configuration sets the following rulesets:' '  --  PVE WEBGUI HTTP(S) ACCESS' '      Maximum HTTP retry 3 attempts.' '      PVE HTTP(S) ban time is 1 hour.' 'If your PVE Postfix SMTP server is configured and working Fail2ban will' 'configured to send email alerts.' '  --  PVE EMAIL ALERTS' '      Send email alerts of banned login attempts.' '      (requires working PVE Postfix SMTP server.)'
+msg_box "#### PLEASE READ CAREFULLY - CONFIGURING FAIL2BAN ####\n
+Fail2Ban is an intrusion prevention software framework that protects computer servers from brute-force attacks.
+
+Most commonly this is used to block selected IP addresses that may belong to hosts that are trying to breach the systems security. It can ban any host IP address that makes too many login attempts or performs any other unwanted action within a time frame defined by the PVE administrator.
+
+Our default Fail2ban configuration sets the following rulesets:
+
+  --  PVE WEBGUI HTTP(S) ACCESS
+      Maximum HTTP retry 3 attempts.
+      PVE HTTP(S) ban time is 1 hour.
+      If your PVE Postfix SMTP server is configured then Fail2ban will send send email alerts.
+
+  --  PVE EMAIL ALERTS
+      Send email alerts of banned login attempts. (requires working PVE Postfix SMTP server)"
   echo
   read -p "Install and configure Fail2ban [y/n]?: " -n 1 -r
   echo
@@ -1283,8 +1310,7 @@ if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ]; then
     export SETUP_FAIL2BAN=0 >/dev/null
     export PARENT_EXEC_PVE_SETUP_FAIL2BAN=0 >/dev/null
     export PVE_HOSTNAME >/dev/null
-    chmod +x pve_setup_fail2ban.sh
-    ./pve_setup_fail2ban.sh
+    source $DIR/pve_host_setup_fail2ban.sh
   else
     SETUP_FAIL2BAN=1 >/dev/null
     info "You have chosen to skip this step."
@@ -1293,8 +1319,8 @@ if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ]; then
 fi
 
 
-### Applying changes to PVE Host ####
-section "$SECTION_HEAD - Applying changes to PVE Host."
+#---- Applying changes to PVE Host
+section "Applying changes to PVE Host."
 if [ "$PVE_HOSTNAME" != "$HOSTNAME" ]; then
   msg "Applying new hostname to PVE host system..."
   hostnamectl set-hostname $PVE_HOSTNAME
@@ -1317,31 +1343,32 @@ if [ "$PVE_HOSTNAME" != "$HOSTNAME" ]; then
 fi
 
 
-#### Finish Status ####
-section "$SECTION_HEAD - Completion Status."
+#---- Finish Status
+section "Completion Status."
 if [ $PVE_NET = 0 ] && [ "$PVE_HOSTNAME" != "echo $HOSTNAME" ] || [ "$PVE_HOST_IP" != "`hostname -i`/$(ip addr show |grep -w inet |grep -v 127.0.0.1|awk '{ print $2}'| cut -d "/" -f 2)" ]; then
   # New hostname, IP address
-  info "Success. Your PVE host is nearly fully configured. Because your PVE host\nis scheduled for a change in hostname and ethernet IP address this host\nrequires a reboot. On reboot this SSH connection will be lost.\n\nTo reconnect a SSH connection your login credentials are:\n    Username: ${YELLOW}root${NC}\n$(if [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin prohibit-password") ]]; then echo "    SSH security method: ${YELLOW}SSH private key only.${NC}\n    SSH Private Key: ${YELLOW}You must have it.${NC}\n    Password: ${YELLOW}Not Permitted${NC} (SSH Private Key only).";elif [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin yes") ]]; then echo "    SSH security method: ${YELLOW}SSH private key & Password.${NC}\n    SSH Private Key: ${YELLOW}You must have it.${NC}\n    Password: ${YELLOW}You must have it.${NC}";elif [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication no") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin yes") ]]; then echo "    SSH security method: ${YELLOW}Password only.${NC}";fi)\n    PVE Server LAN IP Address: ${YELLOW}$(echo "$PVE_HOST_IP" | sed  's/\/.*//g')${NC}\n    Terminal SSH CLI command: ${YELLOW}ssh root@$(echo "$PVE_HOST_IP" | sed  's/\/.*//g')${NC}\n\nThe PVE web interface can be reached via ${YELLOW}https://$(echo "$PVE_HOST_IP" | sed  's/\/.*//g'):8006${NC}\n    Default login username: ${YELLOW}root${NC}\n    Password: ${YELLOW}You must have it.${NC}\nThe root user password is what you specified during the PVE installation process."
+  msg "Success. Your PVE host is nearly fully configured. Because your PVE host is scheduled for a change in hostname and ethernet IP address this host requires a reboot. On reboot this SSH connection will be lost.\n\nTo reconnect a SSH connection your login credentials are:\n    Username: ${YELLOW}root${NC}\n$(if [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin prohibit-password") ]]; then echo "    SSH security method: ${YELLOW}SSH private key only.${NC}\n    SSH Private Key: ${YELLOW}You must have it.${NC}\n    Password: ${YELLOW}Not Permitted${NC} (SSH Private Key only).";elif [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin yes") ]]; then echo "    SSH security method: ${YELLOW}SSH private key & Password.${NC}\n    SSH Private Key: ${YELLOW}You must have it.${NC}\n    Password: ${YELLOW}You must have it.${NC}";elif [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication no") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin yes") ]]; then echo "    SSH security method: ${YELLOW}Password only.${NC}";else echo "    Password: ${YELLOW}You must have it.${NC}";fi)\n    PVE Server LAN IP Address: ${YELLOW}$(echo "$PVE_HOST_IP" | sed  's/\/.*//g')${NC}\n    Terminal SSH CLI command: ${YELLOW}ssh root@$(echo "$PVE_HOST_IP" | sed  's/\/.*//g')${NC}\n\nThe PVE web interface can be reached via ${YELLOW}https://$(echo "$PVE_HOST_IP" | sed  's/\/.*//g'):8006${NC}\n    Default login username: ${YELLOW}root${NC}\n    Password: ${YELLOW}You must have it.${NC}\n\nThe root password is what you specified during the PVE installation process."
   echo
-  msg "If you cannot connect to your PVE host after rebooting check the following:\n      1. The ethernet LAN cable is connected to correct PVE hardware NIC(s). You\n      may have re-assigned PVE default LAN vmbr0 to a different hardware NIC."
+  msg "If you cannot connect to your PVE host after rebooting check the ethernet LAN cable is connected to correct PVE hardware NIC(s). You may have re-assigned PVE default LAN vmbr0 to a different hardware NIC during this setup."
   echo
-  msg "You will now be prompted to reboot this PVE host (RECOMMENDED). If you\nchoose NOT to reboot now then you MUST at a later stage."
+  msg "You will now be prompted to reboot this PVE host (RECOMMENDED). If you choose NOT to reboot now then you MUST at a later stage."
   read -p "Reboot this PVE host now (RECOMMENDED) [y/n]?: " -n 1 -r
   echo
   if [[ $REPLY =~ ^[Yy]$ ]]; then
     msg "Performing a reboot in 3 seconds...\n(your ssh connection will be lost)"
+    echo
     # Cleanup
     cleanup
     sleep 3
     reboot
   else
-    info "You have chosen NOT to perform a PVE system reboot. Remember you\nMUST perform a system reboot at some stage to invoke the changes!"
+    info "You have chosen NOT to perform a PVE system reboot. Remember you MUST perform a system reboot at some stage to invoke the changes!"
     # Cleanup
     cleanup
   fi
 elif [ $PVE_NET = 1 ]; then
   # Same hostname, IP address
-  info "Success. Your PVE host is nearly fully configured.\n\nTo make a SSH connection your login credentials are:\n    Username: ${YELLOW}root${NC}\n$(if [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin prohibit-password") ]]; then echo "    SSH security method: ${YELLOW}SSH private key only.${NC}\n    SSH Private Key: ${YELLOW}You must have it.${NC}\n    Password: ${YELLOW}Not Permitted${NC} (SSH Private Key only).";elif [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin yes") ]]; then echo "    SSH security method: ${YELLOW}SSH private key & Password.${NC}\n    SSH Private Key: ${YELLOW}You must have it.${NC}\n    Password: ${YELLOW}You must have it.${NC}";elif [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication no") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin yes") ]]; then echo "    SSH security method: ${YELLOW}Password only.${NC}";fi)\n    PVE Server LAN IP Address: ${YELLOW}`hostname -i`${NC}\n    Terminal SSH CLI command: ${YELLOW}ssh root@`hostname -i`${NC}\n\nThe PVE web interface can be reached via ${YELLOW}https://`hostname -i`:8006${NC}\n    Default login username: ${YELLOW}root${NC}\n    Password: ${YELLOW}You must have it.${NC}\nThe root user password is what you specified during the PVE installation process.\n\n$(if [ $SETUP_SSHKEY=0 ]; then echo "To finish we need to restart some system services.\n    Restarting service: ${YELLOW}SSHd${NC}";service sshd restart >/dev/null 2>&1;fi)"
+  msg "Success. Your PVE host is nearly fully configured. To make a SSH connection your login credentials are:\n    Username: ${YELLOW}root${NC}\n$(if [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin prohibit-password") ]]; then echo "    SSH security method: ${YELLOW}SSH private key only.${NC}\n    SSH Private Key: ${YELLOW}You must have it.${NC}\n    Password: ${YELLOW}Not Permitted${NC} (SSH Private Key only).";elif [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin yes") ]]; then echo "    SSH security method: ${YELLOW}SSH private key & Password.${NC}\n    SSH Private Key: ${YELLOW}You must have it.${NC}\n    Password: ${YELLOW}You must have it.${NC}";elif [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication no") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin yes") ]]; then echo "    SSH security method: ${YELLOW}Password only.${NC}";fi)\n    PVE Server LAN IP Address: ${YELLOW}`hostname -i`${NC}\n    Terminal SSH CLI command: ${YELLOW}ssh root@`hostname -i`${NC}\n\nThe PVE web interface can be reached via ${YELLOW}https://`hostname -i`:8006${NC}\n    Default login username: ${YELLOW}root${NC}\n    Password: ${YELLOW}You must have it.${NC}\nThe root user password is what you specified during the PVE installation process.\n\n$(if [ $SETUP_SSHKEY=0 ]; then echo "To finish we need to restart some system services.\n    Restarting service: ${YELLOW}SSHd${NC}";service sshd restart >/dev/null 2>&1;fi)"
   # Cleanup
   cleanup
 fi

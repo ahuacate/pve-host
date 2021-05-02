@@ -1,77 +1,32 @@
 #!/usr/bin/env bash
+# ----------------------------------------------------------------------------------
+# Filename:     pve_host_add_nfs_mounts.sh
+# Description:  Source script for creating PVE Host NFS Mounts
+# ----------------------------------------------------------------------------------
 
-set -Eeuo pipefail
-shopt -s expand_aliases
-alias die='EXIT=$? LINE=$LINENO error_exit'
-trap die ERR
-trap cleanup EXIT
-function error_exit() {
-  trap - ERR
-  local DEFAULT='Unknown failure occured.'
-  local REASON="\e[97m${1:-$DEFAULT}\e[39m"
-  local FLAG="\e[91m[ERROR] \e[93m$EXIT@$LINE"
-  msg "$FLAG $REASON"
-  [ ! -z ${CTID-} ] && cleanup_failed
-  exit $EXIT
-}
-function warn() {
-  local REASON="\e[97m$1\e[39m"
-  local FLAG="\e[93m[WARNING]\e[39m"
-  msg "$FLAG $REASON"
-}
-function info() {
-  local REASON="$1"
-  local FLAG="\e[36m[INFO]\e[39m"
-  msg "$FLAG $REASON"
-}
-function msg() {
-  local TEXT="$1"
-  echo -e "$TEXT"
-}
-function section() {
-  local REASON="  \e[97m$1\e[37m"
-  printf -- '-%.0s' {1..100}; echo ""
-  msg "$REASON"
-  printf -- '-%.0s' {1..100}; echo ""
+#---- Bash command to run script ---------------------------------------------------
+
+#bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_add_nfs_mounts.sh)"
+
+#---- Source -----------------------------------------------------------------------
+
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+PVE_SOURCE="$DIR/../../common/pve/source"
+BASH_SOURCE="$DIR/../../common/bash/source"
+
+#---- Dependencies -----------------------------------------------------------------
+
+# Check for Internet connectivity
+if nc -zw1 google.com 443; then
   echo
-}
-function pushd () {
-  command pushd "$@" &> /dev/null
-}
-function popd () {
-  command popd "$@" &> /dev/null
-}
-function cleanup() {
-  popd
-  rm -rf $TEMP_DIR
-  unset TEMP_DIR
-}
-function load_module() {
-  if ! $(lsmod | grep -Fq $1); then
-    modprobe $1 &>/dev/null || \
-      die "Failed to load '$1' module."
-  fi
-  MODULES_PATH=/etc/modules
-  if ! $(grep -Fxq "$1" $MODULES_PATH); then
-    echo "$1" >> $MODULES_PATH || \
-      die "Failed to add '$1' module to load at boot."
-  fi
-}
-function box_out() {
-  set +u
-  local s=("$@") b w
-  for l in "${s[@]}"; do
-	((w<${#l})) && { b="$l"; w="${#l}"; }
-  done
-  tput setaf 3
-  echo -e " -${b//?/-}-\n| ${b//?/ } |"
-  for l in "${s[@]}"; do
-	printf '| %s%*s%s |\n' "$(tput setaf 7)" "-$w" "$l" "$(tput setaf 3)"
-  done
-  echo -e "| ${b//?/ } |\n -${b//?/-}-"
-  tput sgr 0
-  set -u
-}
+else
+  echo "Checking for internet connectivity..."
+  echo -e "Internet connectivity status: \033[0;31mDown\033[0m\n\nCannot proceed without a internet connection.\nFix your PVE hosts internet connection and try again..."
+  echo
+  exit 0
+fi
+# Run Bash Header
+source $PVE_SOURCE/pvesource_bash_defaults.sh
 ipvalid() {
   # Set up local variables
   local ip=${1:-1.2.3.4}
@@ -86,103 +41,74 @@ ipvalid() {
   return 0
 }
 
-# Colour
-RED=$'\033[0;31m'
-YELLOW=$'\033[1;33m'
-GREEN=$'\033[0;32m'
-WHITE=$'\033[1;37m'
-NC=$'\033[0m'
+#---- Static Variables -------------------------------------------------------------
 
-# Resize Terminal
-printf '\033[8;40;120t'
-
-# Detect modules and automatically load at boot
-load_module aufs
-load_module overlay
-
-# Set Temp Folder
-if [ -z "${TEMP_DIR+x}" ]; then
-  TEMP_DIR=$(mktemp -d)
-  pushd $TEMP_DIR >/dev/null
-else
-  if [ $(pwd -P) != $TEMP_DIR ]; then
-    cd $TEMP_DIR >/dev/null
-  fi
-fi
-
-# Checking for Internet connectivity
-if [ -z "${SETUP_POSTFIX+x}" ]; then
-  msg "Checking for internet connectivity..."
-  if nc -zw1 google.com 443; then
-    info "Internet connectivity status: ${GREEN}Active${NC}"
-    echo
-  else
-    warn "Internet connectivity status: ${RED}Down${NC}\n          Cannot proceed without a internet connection.\n          Fix your PVE hosts internet connection and try again..."
-    echo
-    cleanup
-    exit 0
-  fi
-fi
-
+# Easy Script Section Header Body Text
+SECTION_HEAD='PVE Host Postfix'
 # Check PVE Hostname variable
 if [ -z "${SETUP_POSTFIX+x}" ]; then
   PVE_HOSTNAME=$HOSTNAME
 fi
 
+#---- Other Variables --------------------------------------------------------------
+#---- Other Files ------------------------------------------------------------------
+#---- Body -------------------------------------------------------------------------
 
-# Script Variables
-SECTION_HEAD="Proxmox PVE Host Build & Configure"
-
-
-# Download external scripts
-
-#########################################################################################
-# This script is for Configuring Postfix and Email Alerts                               #
-#                                                                                       #
-# Tested on Proxmox Version : pve-manager/6.1-3/37248ce6 (running kernel: 5.3.10-1-pve) #
-#########################################################################################
-
-
-# Command to run script
-#bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/proxmox-node/master/scripts/pve_setup_postfix.sh)"
-
-
-#### Install and Configure SSMTP Email Alerts ####
+#---- Install and Configure SSMTP Email Alerts
 if [ -z "${SETUP_POSTFIX+x}" ] && [ -z "${PARENT_EXEC_PVE_SETUP_POSTFIX+x}" ]; then
-section "$SECTION_HEAD - Configuring Postfix and Email Alerts."
+  section "Configuring Postfix and Email Alerts."
 
-box_out '#### PLEASE READ CAREFULLY - POSTFIX & EMAIL ALERTS ####' '' 'Send email alerts about your PVE host to the system’s designated administrator.' 'Be alerted about unwarranted login attempts and other system critical alerts.' 'Proxmox is preinstalled with Postfix SMTP server which we use for sending your' 'PVE nodes critical alerts.' '' 'SMTP is a simple Mail Transfer Agent (MTA) while easy to setup it' 'requires the following prerequisites and credentials:' '' '  --  SMTP SERVER' '      You require a SMTP server that can receive the emails from your machine' '      and send them to the designated administrator. ' '      If you use Gmail SMTP server its best to enable "App Passwords". An "App' '      Password" is a 16-digit passcode that gives an app or device permission' '      to access your Google Account.' '      Or you can use a mailgun.com flex account relay server (Recommended).' '' '  --  REQUIRED SMTP SERVER CREDENTIALS' '      1. Designated administrator email address' '         (i.e your working admin email address)' '      2. SMTP server address' '         (i.e smtp.gmail.com or smtp.mailgun.org)' '      3. SMTP server port' '         (i.e gmail port is 587 and mailgun port is 587)' '      4. SMTP server username' '         (i.e MyEmailAddress@gmail.com or postmaster@sandboxa6ac6.mailgun.org)' '      5. SMTP server default password' '         (i.e your Gmail App Password or mailgun SMTP password)' '' 'If you choose to proceed have your SMTP server credentials available.' 'This script will configure your PVE nodes Postfix SMTP server.'
-echo
-while true; do
-  read -p "Install and configure Postfix and email alerts [y/n]?: " -n 1 -r
+  msg_box "#### PLEASE READ CAREFULLY - POSTFIX & EMAIL ALERTS ####\n
+  Send email alerts about your PVE host to the systems designated administrator. Be alerted about unwarranted login attempts and other system critical alerts. Proxmox is preinstalled with Postfix SMTP server which we use for sending your PVE nodes critical alerts.
+
+  SMTP is a simple Mail Transfer Agent (MTA) while easy to setup it requires the following prerequisites and credentials:
+
+    --  SMTP SERVER
+        You require a SMTP server that can receive the emails from your machine and send them to the designated administrator. If you use Gmail SMTP server its best to enable 'App Passwords'. An 'App Password' is a 16-digit passcode that gives an app or device permission to access your Google Account. Or you can use a mailgun.com flex account relay server (Recommended).
+        
+    --  REQUIRED SMTP SERVER CREDENTIALS
+        1. Designated administrator email address (i.e your working admin email address)
+
+        2. SMTP server address (i.e smtp.gmail.com or smtp.mailgun.org)
+
+        3. SMTP server port (i.e gmail port is 587 and mailgun port is 587)
+
+        4. SMTP server username (i.e MyEmailAddress@gmail.com or postmaster@sandboxa6ac6.mailgun.org)
+    
+        5. SMTP server default password (i.e your Gmail App Password or mailgun SMTP password)
+
+  If you choose to proceed have your SMTP server credentials available. This script will configure your PVE nodes Postfix SMTP server."
   echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo
-    read -p "Do you have your Gmail or Mailgun or Custom SMTP server credentials ready [y/n]?: " -n 1 -r
+  while true; do
+    read -p "Install and configure Postfix and email alerts [y/n]?: " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-      msg "Setting up Postfix..."
-      SETUP_POSTFIX=0 >/dev/null
       echo
-      break
+      read -p "Do you have your GMail or MailGun or Custom SMTP server credentials ready [y/n]?: " -n 1 -r
+      echo
+      if [[ $REPLY =~ ^[Yy]$ ]]; then
+        msg "Setting up Postfix..."
+        SETUP_POSTFIX=0 >/dev/null
+        echo
+        break
+      else
+        warn "In the next steps you must have your 16 digit GMail App Password OR MailGun\n OR custom SMTP server credentials ready for input to continue.\nTry again..."
+        echo
+      fi
     else
-      warn "In the next steps you must have your 16 digit Gmail App Password OR Mailgun\n OR custom SMTP server credentials ready for input to continue.\nTry again..."
-      echo
+      SETUP_POSTFIX=1 >/dev/null
+      info "You have chosen to skip this step."
+      cleanup
+      exit 0
+      break
     fi
-  else
-    SETUP_POSTFIX=1 >/dev/null
-    info "You have chosen to skip this step."
-    cleanup
-    exit 0
-    break
-  fi
-  echo
-done
+    echo
+  done
 fi
 
 
-#### Checking PVE Host Prerequisites ####
-section "$SECTION_HEAD - Checking Prerequisites"
+#---- Checking PVE Host Prerequisites
+section "Checking Prerequisites"
 
 # libsasl2-modules for Postfix
 if [ $(dpkg -s libsasl2-modules >/dev/null 2>&1; echo $?) = 0 ]; then
@@ -226,9 +152,9 @@ else
   echo
 fi
 
-#### Setting PVE Postfix Variables ####
+#---- Setting PVE Postfix Variables
 while true; do
-  section "$SECTION_HEAD - Setting Postfix Variables"
+  section "Setting Postfix Variables"
 
   # VAR for the script
   POSTFIX_CONFIG=/etc/postfix/main.cf
@@ -237,51 +163,51 @@ while true; do
 
   # Set PVE SMTP Server Type
   while true; do
-  TYPE01="${YELLOW}Mailgun${NC} - Configure for a Mailgun SMTP server."
-  TYPE02="${YELLOW}Gmail${NC} - Configure for a Gmail SMTP server."
-  TYPE03="${YELLOW}Other${NC} - Custom SMTP server configuration."
-  PS3="Select the SMTP server type you use (entering numeric) : "
-  msg "Available options:"
-  options=("$TYPE01" "$TYPE02" "$TYPE03")
-  select menu in "${options[@]}"; do
-    case $menu in
-      "$TYPE01")
-        info "SMTP server is set as: $(echo $menu | awk '{print $1}')"
-        SMTP_TYPE=mailgun
-        SMTP_SERVER_ADDRESS="smtp.mailgun.org"
-        SMTP_SERVER_PORT=587
-        echo
-        break
-        ;;
-      "$TYPE02")
-        info "SMTP server is set as: $(echo $menu | awk '{print $1}')"
-        SMTP_TYPE=gmail
-        SMTP_SERVER_ADDRESS="smtp.gmail.com"
-        SMTP_SERVER_PORT=587
-        echo
-        break
-        ;;
-      "$TYPE03")
-        SMTP_TYPE=custom
-        # while true; do
-        read -p "Enter SMTP Server address (i.e smtp.hello.com): " -e SMTP_SERVER_ADDRESS
-        read -p "Enter SMTP Server port number: " -e -i 587 SMTP_SERVER_PORT
-        read -p "Accept SMTP server address: ${WHITE}$SMTP_SERVER_ADDRESS${NC}:${WHITE}$SMTP_SERVER_PORT${NC} [y/n]?: " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-          msg "Accepted. Now validating address."
+    TYPE01="${YELLOW}Mailgun${NC} - Configure for a Mailgun SMTP server."
+    TYPE02="${YELLOW}GMail${NC} - Configure for a GMail SMTP server."
+    TYPE03="${YELLOW}Other${NC} - Custom SMTP server configuration."
+    PS3="Select the SMTP server type you use (entering numeric) : "
+    msg "Available options:"
+    options=("$TYPE01" "$TYPE02" "$TYPE03")
+    select menu in "${options[@]}"; do
+      case $menu in
+        "$TYPE01")
+          info "SMTP server is set as: $(echo $menu | awk '{print $1}')"
+          SMTP_TYPE=mailgun
+          SMTP_SERVER_ADDRESS="smtp.mailgun.org"
+          SMTP_SERVER_PORT=587
           echo
           break
-        else
+          ;;
+        "$TYPE02")
+          info "SMTP server is set as: $(echo $menu | awk '{print $1}')"
+          SMTP_TYPE=gmail
+          SMTP_SERVER_ADDRESS="smtp.gmail.com"
+          SMTP_SERVER_PORT=587
           echo
-          msg "Try again..."
-          continue
-        fi
-        # done
-        ;;
-      *) warn "Invalid entry. Try again.." >&2
-    esac
-  done
+          break
+          ;;
+        "$TYPE03")
+          SMTP_TYPE=custom
+          # while true; do
+          read -p "Enter SMTP Server address (i.e smtp.hello.com): " -e SMTP_SERVER_ADDRESS
+          read -p "Enter SMTP Server port number: " -e -i 587 SMTP_SERVER_PORT
+          read -p "Accept SMTP server address: ${WHITE}$SMTP_SERVER_ADDRESS${NC}:${WHITE}$SMTP_SERVER_PORT${NC} [y/n]?: " -n 1 -r
+          echo
+          if [[ $REPLY =~ ^[Yy]$ ]]; then
+            msg "Accepted. Now validating address."
+            echo
+            break
+          else
+            echo
+            msg "Try again..."
+            continue
+          fi
+          # done
+          ;;
+        *) warn "Invalid entry. Try again.." >&2
+      esac
+    done
 
     # Validating SMTP Server Address
     ip=$SMTP_SERVER_ADDRESS
@@ -329,7 +255,7 @@ while true; do
   # Set PVE root administrator email address
   PVE_ROOT_EMAIL_OLD=$(pveum user list | awk -F " │ " '$1 ~ /root@pam/' | awk -F " │ " '{ print $3 }')
   msg "Validate your PVE root or system email address..."
-  msg "Your PVE root user email address is ${WHITE}$PVE_ROOT_EMAIL_OLD${NC}. This email address\nis set to send all PVE system notifications and alerts. In the next steps\nyou have the option to accept or change your default PVE root email address."
+  msg "Your PVE root user email address is ${WHITE}$PVE_ROOT_EMAIL_OLD${NC}. This email address is set to send all PVE system notifications and alerts. In the next steps you have the option to accept or change your default PVE root email address."
   read -p "Accept PVE root email address ${WHITE}$PVE_ROOT_EMAIL_OLD${NC} [y/n]?: " -n 1 -r
   echo
   if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -355,8 +281,8 @@ while true; do
   fi
 
 
-  #### Configuring PVE Postfix ####
-  section "$SECTION_HEAD - Configuring PVE Postfix"
+  #---- Configuring PVE Postfix
+  section "Configuring PVE Postfix"
 
   # Creating /etc/postfix/sasl_passwd
   msg "Creating /etc/postfix/sasl_passwd..."
@@ -461,7 +387,20 @@ while true; do
 
   # Testing Postfix SMTP Server
   echo
-  box_out '#### PLEASE READ CAREFULLY - SMTP & EMAIL TESTING ####' '' 'In the next step you have the option to test your SMTP settings' 'by sending a test email to your PVE root or system email address.' '' 'If you choose to send a test email then:' '  --  Check your mailbox to validate your SMTP settings work.' '  --  Check the mailbox spam folder and whitelist any' '      test email found there.' '  --  If you do not receive a test email then something is wrong with' '      your configuration inputs.' '      You have the option to re-enter your credentials and try again.' '' 'If you choose NOT to send a test email then:' '  --  SMTP settings are configured but not tested.' '  --  All changes must be made manually by the PVE system administrator.' '      (i.e edit  /etc/postfix/main.cf )'
+  msg_box "#### PLEASE READ CAREFULLY - SMTP & EMAIL TESTING ####\n
+  In the next step you have the option to test your SMTP settings by sending a test email to your PVE root or system email address. If you choose to send a test email then:
+
+    --  Check your mailbox to validate your SMTP settings work.
+
+    --  Check the mailbox spam folder and whitelist any test email found there.
+
+    --  If you do not receive a test email then something is wrong with your configuration inputs. You have the option to re-enter your credentials and try again.
+    
+  If you choose NOT to send a test email then:
+
+    --  SMTP settings are configured but not tested.
+
+    --  All changes must be made manually by the PVE system administrator. (i.e edit  /etc/postfix/main.cf )"
   echo
   read -p "Do you want to send a test email to $PVE_ROOT_EMAIL [y/n]?: " -n 1 -r
   echo
@@ -507,15 +446,17 @@ while true; do
     fi
   else
     info "You have chosen not to test your Postfix SMTP email server. Skipping the\nvalidation step. SMTP settings are configured but not tested. All changes must\nbe made manually by the PVE system administrator."
+    break
   fi
 done
 echo
 
 
-#### Finish ####
-section "$SECTION_HEAD - PVE Postfix Completion Status"
+#---- Finish
+section "PVE Postfix Completion Status"
 
-msg "${WHITE}Success.${NC}"
+msg "${WHITE}Success.${NC} Your Postfix email server is working."
+echo
 sleep 3
 
 # Cleanup

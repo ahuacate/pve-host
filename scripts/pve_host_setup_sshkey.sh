@@ -1,166 +1,64 @@
 #!/usr/bin/env bash
+# ----------------------------------------------------------------------------------
+# Filename:     pve_host_setup_sshkey.sh
+# Description:  Source script for setting up PVE host SSH Keys
+# ----------------------------------------------------------------------------------
 
-set -Eeuo pipefail
-shopt -s expand_aliases
-alias die='EXIT=$? LINE=$LINENO error_exit'
-trap die ERR
-trap cleanup EXIT
-function error_exit() {
-  trap - ERR
-  local DEFAULT='Unknown failure occured.'
-  local REASON="\e[97m${1:-$DEFAULT}\e[39m"
-  local FLAG="\e[91m[ERROR] \e[93m$EXIT@$LINE"
-  msg "$FLAG $REASON"
-  [ ! -z ${CTID-} ] && cleanup_failed
-  exit $EXIT
-}
-function warn() {
-  local REASON="\e[97m$1\e[39m"
-  local FLAG="\e[93m[WARNING]\e[39m"
-  msg "$FLAG $REASON"
-}
-function info() {
-  local REASON="$1"
-  local FLAG="\e[36m[INFO]\e[39m"
-  msg "$FLAG $REASON"
-}
-function msg() {
-  local TEXT="$1"
-  echo -e "$TEXT"
-}
-function section() {
-  local REASON="  \e[97m$1\e[37m"
-  printf -- '-%.0s' {1..100}; echo ""
-  msg "$REASON"
-  printf -- '-%.0s' {1..100}; echo ""
+#---- Bash command to run script ---------------------------------------------------
+
+#bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_sshkey.sh)"
+
+#---- Source -----------------------------------------------------------------------
+
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+PVE_SOURCE="$DIR/../../common/pve/source"
+BASH_SOURCE="$DIR/../../common/bash/source"
+
+#---- Dependencies -----------------------------------------------------------------
+
+# Check for Internet connectivity
+if nc -zw1 google.com 443; then
   echo
-}
-function pushd () {
-  command pushd "$@" &> /dev/null
-}
-function popd () {
-  command popd "$@" &> /dev/null
-}
-function cleanup() {
-  popd
-  rm -rf $TEMP_DIR
-  unset TEMP_DIR
-}
-function load_module() {
-  if ! $(lsmod | grep -Fq $1); then
-    modprobe $1 &>/dev/null || \
-      die "Failed to load '$1' module."
-  fi
-  MODULES_PATH=/etc/modules
-  if ! $(grep -Fxq "$1" $MODULES_PATH); then
-    echo "$1" >> $MODULES_PATH || \
-      die "Failed to add '$1' module to load at boot."
-  fi
-}
-function box_out() {
-  set +u
-  local s=("$@") b w
-  for l in "${s[@]}"; do
-	((w<${#l})) && { b="$l"; w="${#l}"; }
-  done
-  tput setaf 3
-  echo -e " -${b//?/-}-\n| ${b//?/ } |"
-  for l in "${s[@]}"; do
-	printf '| %s%*s%s |\n' "$(tput setaf 7)" "-$w" "$l" "$(tput setaf 3)"
-  done
-  echo -e "| ${b//?/ } |\n -${b//?/-}-"
-  tput sgr 0
-  set -u
-}
-ipvalid() {
-  # Set up local variables
-  local ip=${1:-1.2.3.4}
-  local IFS=.; local -a a=($ip)
-  # Start with a regex format test
-  [[ $ip =~ ^[0-9]+(\.[0-9]+){3}$ ]] || return 1
-  # Test values of quads
-  local quad
-  for quad in {0..3}; do
-    [[ "${a[$quad]}" -gt 255 ]] && return 1
-  done
-  return 0
-}
-
-# Colour
-RED=$'\033[0;31m'
-YELLOW=$'\033[1;33m'
-GREEN=$'\033[0;32m'
-WHITE=$'\033[1;37m'
-NC=$'\033[0m'
-
-# Resize Terminal
-printf '\033[8;40;120t'
-
-# Detect modules and automatically load at boot
-load_module aufs
-load_module overlay
-
-# Set Temp Folder
-if [ -z "${TEMP_DIR+x}" ]; then
-  TEMP_DIR=$(mktemp -d)
-  pushd $TEMP_DIR >/dev/null
 else
-  if [ $(pwd -P) != $TEMP_DIR ]; then
-    cd $TEMP_DIR >/dev/null
-  fi
+  echo "Checking for internet connectivity..."
+  echo -e "Internet connectivity status: \033[0;31mDown\033[0m\n\nCannot proceed without a internet connection.\nFix your PVE hosts internet connection and try again..."
+  echo
+  exit 0
 fi
 
-# Checking for Internet connectivity
-if [ -z "${SETUP_SSHKEY+x}" ]; then
-  msg "Checking for internet connectivity..."
-  if nc -zw1 google.com 443; then
-    info "Internet connectivity status: ${GREEN}Active${NC}"
-    echo
-  else
-    warn "Internet connectivity status: ${RED}Down${NC}\n          Cannot proceed without a internet connection.\n          Fix your PVE hosts internet connection and try again..."
-    echo
-    cleanup
-    exit 0
-  fi
-fi
+# Run Bash Header
+source $PVE_SOURCE/pvesource_bash_defaults.sh
 
+#---- Static Variables -------------------------------------------------------------
 
+# Easy Script Section Header Body Text
+SECTION_HEAD='PVE Host SSH Keys'
 # Check Ahuacate Check variables
 if [[ $(cat /etc/postfix/main.cf | grep "### Ahuacate_Check=0.*") ]]; then
   SMTP_STATUS=0
 elif [[ ! $(cat /etc/postfix/main.cf | grep "### Ahuacate_Check=0.*") ]]; then
   SMTP_STATUS=1
 fi
-
 # Check PVE Hostname variable
 if [ -z "${SETUP_SSHKEY+x}" ]; then
   PVE_HOSTNAME=$HOSTNAME
 fi
 
+#---- Other Variables --------------------------------------------------------------
+#---- Other Files ------------------------------------------------------------------
+#---- Body -------------------------------------------------------------------------
 
-# Script Variables
-SECTION_HEAD="Proxmox PVE Host Build & Configure"
-
-
-# Download external scripts
-
-#########################################################################################
-# This script is for Configuring SSH Authorised Keys                                    #
-#                                                                                       #
-# Tested on Proxmox Version : pve-manager/6.1-3/37248ce6 (running kernel: 5.3.10-1-pve) #
-#########################################################################################
-
-
-# Command to run script
-#bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/proxmox-node/master/scripts/pve_setup_sshkey.sh)"
-
-
-### Install and Configure SSH Authorised Keys ####
+#---- Install and Configure SSH Authorised Keys
 
 if [ -z "${SETUP_SSHKEY+x}" ] && [ -z "${PARENT_EXEC_PVE_SETUP_SSHKEY+x}" ]; then
-  section "$SECTION_HEAD - Creating & Configuring SSH Authorized Keys."
+  section "Creating & Configuring SSH Authorized Keys"
 
-  box_out '#### PLEASE READ CAREFULLY - CONFIGURING SSH AUTHORIZED KEYS ####' '' 'You can use a SSH key for connecting to the PVE root account over SSH.' 'PVE requires all SSH keys to be in the OpenSSH format. Your SSH key choices are:' '' '      1. Append or add your existing SSH Public Key to your PVE hosts' '         authorized keys file.' '      2. Generate a a new set of SSH key pairs.' '' 'If you choose to append your existing SSH Public Key to your PVE host you will' 'be prompted to paste your Public Key into this terminal console. Use your' 'mouse right-click to paste.'
+  msg_box "#### PLEASE READ CAREFULLY - CONFIGURING SSH AUTHORIZED KEYS ####\n
+  You can use a SSH key for connecting to the PVE root account over SSH. PVE requires all SSH keys to be in the OpenSSH format. Your SSH key choices are:
+
+  1. Append or add your existing SSH Public Key to your PVE hosts authorized keys file.
+
+  2. Generate a a new set of SSH key pairs. If you choose to append your existing SSH Public Key to your PVE host you will be prompted to paste your Public Key into this terminal console. Use your mouse right-click to paste."
   echo
   read -p "Configure your PVE host for SSH key access [y/n]?: " -n 1 -r
   echo
@@ -176,8 +74,8 @@ if [ -z "${SETUP_SSHKEY+x}" ] && [ -z "${PARENT_EXEC_PVE_SETUP_SSHKEY+x}" ]; the
   fi
 fi
 
-#### Checking PVE Host Prerequisites ####
-section "$SECTION_HEAD - Checking Prerequisites"
+#---- Checking PVE Host Prerequisites
+section "Checking Prerequisites"
 
 # nohup for PVE (part of package coreutils)
 if [ $(dpkg -s coreutils >/dev/null 2>&1; echo $?) = 0 ]; then
@@ -193,9 +91,8 @@ else
   echo
 fi
 
-#### Configuring SSH keys ####
-section "$SECTION_HEAD - Configuring SSH Authorized Keys."
-
+#---- Configuring SSH keys
+section "Configuring SSH Authorized Keys."
 
 # Select SSH key access type
 TYPE01="${YELLOW}Existing SSH Keys${NC} - Append or add your existing SSH Public Key."
@@ -223,7 +120,7 @@ done
 
 # Copy and Paste your existing key into the terminal window
 if [ $SSH_TYPE = "TYPE01" ]; then
-  section "$SECTION_HEAD - Append or Add your existing SSH Public Key."
+  section "Append or Add your existing SSH Public Key."
   msg "You have chosen to use your existing SSH Public Key. First you must copy the\ncontents of your SSH Public Key file into your clipboard.\n\n  --  COPY YOUR SSH PUBLIC KEY FILE\n      1. Open your SSH Public Key file in a text editor.\n      2. Highlight the key contents ( Ctrl + A ).\n      3. Copy the highlighted contents to your clipboard ( Ctrl + C ).\n  --  PASTE YOUR SSH PUBLIC KEY FILE\n      1. Mouse Right-Click when you are prompted ( > ).\n\nOr you can use the mouse to: highlight, select copy and paste at the prompt."
   while true; do
   echo
@@ -254,7 +151,7 @@ fi
   
 # Generate a new set of SSH RSA Key pairs
 if [ $SSH_TYPE = "TYPE02" ]; then
-  section "$SECTION_HEAD - Generate a new set of SSH Key pair files."
+  section "Generate a new set of SSH Key pair files."
   msg "You have chosen to generate a new set of SSH key pair files. Your new SSH\nkey pair files will be generated using the ed25519 algorithm. In the next steps\nyou will be given the option to:\n\n  --  EMAIL YOUR NEW SSH PUBLIC KEY FILES\n      1. You may need to confirm your PVE Postfix is working.\n      2. Confirm your recipients email address is valid.\n\nYour new SSH key pair files will also be backed up to a linux tar.gz file."
   if [[ $(df -h | awk 'NR>1 { print $1, "mounted on", $NF }' | grep "/mnt/pve/.*backup") ]]; then
     msg "\n  --  BACKUP LOCATION OF SSH PUBLIC KEY FILES\n      $(df -h | awk 'NR>1 { print $1, "mounted on", $NF }' | grep "/mnt/pve/.*backup")\n      NAS File Location: ${WHITE}"$(df -h | awk 'NR>1 { print $1, $NF }' | grep "/mnt/pve/.*backup" | awk '{ print $1}')/${PVE_HOSTNAME,,}"_ssh_keys.tar.gz${NC}\n      PVE File Location: ${WHITE}$(df -h | awk 'NR>1 { print $1, $NF }' | grep "/mnt/pve/.*backup" | awk '{ print $NF}')/"${PVE_HOSTNAME,,}"_ssh_keys.tar.gz${NC}"
@@ -335,14 +232,14 @@ if [ $SSH_TYPE = "TYPE02" ]; then
 fi
 
 
-#### Configuring SSH Security ####
-section "$SECTION_HEAD - Proxmox SSHD security modifications."
+#---- Configuring SSH Security
+section "Proxmox SSHD security modifications."
 
 msg "Minimizing vulnerabilities in your Secure Shell (SSH) protocol is key to\nensuring the security of your PVE environment. We have two preset measures you\ncan take to make your PVE host more secure."
 
 # Select SSHD Security modifications
-TYPE01="${YELLOW}SSH Keys Only${NC} - Authentication by SSH key-pairs only (Recommended)."
-TYPE02="${YELLOW}SSH Keys & Passwords${NC} - Authentication by passwords & SSH key-pairs."
+TYPE01="${YELLOW}SSH Keys Only${NC} - Authentication by SSH key-pairs only."
+TYPE02="${YELLOW}SSH Keys & Passwords${NC} - Authentication by passwords & SSH key-pairs (Recommended)."
 PS3="Select the SSH key security you want for your PVE host (entering numeric) : "
 msg "Available options:"
 options=("$TYPE01" "$TYPE02")
@@ -381,8 +278,8 @@ elif [ $SSH_SEC = TYPE02 ]; then
 fi
 
 
-#### Finish ####
-section "$SECTION_HEAD - PVE SSH Key Completion Status"
+#---- Finish
+section "PVE SSH Key Completion Status"
 
 msg "${WHITE}Success.${NC}"
 sleep 3
