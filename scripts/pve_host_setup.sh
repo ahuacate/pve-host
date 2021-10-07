@@ -54,44 +54,51 @@ section "Performing Prerequisites"
 
 # Update PVE OS
 while true; do
-  msg "Verifying the PVE subscription status of this hardware node..."
+  msg "Verifying PVE host subscription status-.."
   if [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]') = "notfound" ]; then
-    msg "You do not have a valid Proxmox (PVE) subscription key. You need a valid PVE subscription key to access Proxmox pve-enterprise level update repository. This costs money. ${WHITE}But its not required (for home use).${NC}
+    msg "No valid Proxmox (PVE) subscription key is installed. A valid PVE subscription key is needed to access the Proxmox pve-enterprise level update repository. This costs money. ${WHITE}But its not required (for home use).${NC}
 
-    If you have a valid PVE subscription key enter '${WHITE}y${NC}' at the next prompt.
-
-    If you do NOT have a valid PVE subscription key then enter '${WHITE}n${NC}' at the next prompt (RECOMMENDED)."
+    If the User has a valid PVE subscription then enter '${WHITE}Y/y${NC}' at the next prompt. If not, then enter '${WHITE}N/n${NC}' at the next prompt (RECOMMENDED)."
     echo
-    read -p "Do you have a valid PVE enterprise subscription key [y/n]? " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-      msg "You need to install your Proxmox subscription key before proceeding using the PVE web interface. Take the following steps:
+    while true; do
+      read -p "Does the User possess a valid PVE enterprise subscription key [y/n]?: " -n 1 -r YN
+      echo
+      case $YN in
+        [Yy]*)
+          msg "The Proxmox subscription key must be installed before proceeding. Take the following steps:
 
-        Go to PVE web interface: ${YELLOW}https://`hostname -i`:8006${NC}
-        Default login username: ${YELLOW}root${NC}
-        Password: ${YELLOW}You must have it.${NC}
-                  
-      The root user password is what you specified during the PVE installation process. This script will exit in 3 seconds. Complete the above tasks and try again..."
-      sleep 3
-      cleanup
-      exit 0
-    else
-      if [ -f "/etc/apt/sources.list.d/pve-enterprise.list" ]; then
-        rm /etc/apt/sources.list.d/pve-enterprise.list > /dev/null
-      fi
-      echo 'deb http://download.proxmox.com/debian/pve buster pve-no-subscription' > /etc/apt/sources.list.d/pve-no-subscription.list
-      #sed -i -r '/^#?deb https:\/\/enterprise.proxmox.com\/debian\/pve buster pve-enterprise/c\#deb https:\/\/enterprise.proxmox.com\/debian\/pve buster pve-enterprise' /etc/apt/sources.list.d/pve-enterprise.list
-      info "PVE subscription status is: ${YELLOW}$(pvesubscription get | grep "status:.*" | awk '{ print $2 }')${NC}\nProceeding with PVE updates and upgrades. No Subscription edition."
-      break
-    fi
+            Go to PVE web interface: ${YELLOW}https://`hostname -i`:8006${NC}
+            Default login username: ${YELLOW}root${NC}
+            Password: ${YELLOW}You must have it.${NC}
+                      
+          The root user password is what the installer specified during the PVE installation process. This script will exit in 3 seconds. Complete the above tasks and try again..."
+          sleep 3
+          trap cleanup
+          exit 0
+          ;;
+        [Nn]*)
+          if [ -f "/etc/apt/sources.list.d/pve-enterprise.list" ]; then
+            rm /etc/apt/sources.list.d/pve-enterprise.list > /dev/null
+          fi
+          echo 'deb http://download.proxmox.com/debian/pve buster pve-no-subscription' > /etc/apt/sources.list.d/pve-no-subscription.list
+          #sed -i -r '/^#?deb https:\/\/enterprise.proxmox.com\/debian\/pve buster pve-enterprise/c\#deb https:\/\/enterprise.proxmox.com\/debian\/pve buster pve-enterprise' /etc/apt/sources.list.d/pve-enterprise.list
+          info "PVE subscription status is: ${YELLOW}$(pvesubscription get | grep "status:.*" | awk '{ print $2 }')${NC}\nProceeding with PVE updates and upgrades. None Subscription edition."
+          break 2
+          ;;
+        *)
+          warn "Error! Entry must be 'y' or 'n'. Try again..."
+          echo
+          ;;
+      esac
+    done
   elif [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]') = "active" ]; then
-    info "PVE subscription status is: ${YELLOW}$(pvesubscription get | grep "status:.*" | awk '{ print $2 }')${NC}\nProceeding with PVE updates and upgrades. Subscription edition."
+    info "PVE subscription status: ${YELLOW}$(pvesubscription get | grep "status:.*" | awk '{ print $2 }')${NC}\nProceeding with PVE updates and upgrades. Subscription edition."
     break
   elif [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]') != "active" ] || [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]') != "notfound" ]; then
-    msg "Cannot validate your PVE subscription key status. Your PVE subscription key may have expired or your PVE host cannot connect to the Proxmox key validation server. You have two choices to solve this problem:"
+    msg "Cannot validate the PVE hosts subscription key status. The PVE subscription key may have expired or the PVE host cannot connect to the Proxmox key validation server. The User has two choices to solve this problem:"
     # Set PVE subscription key fix
     TYPE01="${YELLOW}Key Delete${NC} - Delete any existing PVE subscription key and try again."
-    TYPE02="${YELLOW}Exit${NC} - Exit this script, fix the problem & try again."
+    TYPE02="${YELLOW}Exit${NC} - Exit this script, manually fix the problem & try again."
     PS3="Select the steps to be taken (entering numeric) : "
     msg "Available options:"
     options=("$TYPE01" "$TYPE02")
@@ -105,9 +112,9 @@ while true; do
           sleep 1
           ;;
         "$TYPE02")
-          info "You have chosen to skip this step. Aborting configuration."
+          info "The User has chosen to skip this step. Aborting configuration."
           sleep 1
-          cleanup
+          trap cleanup
           exit 0
           ;;
         *) warn "Invalid entry. Try again.." >&2
@@ -196,29 +203,29 @@ echo
 section "Introduction."
 
 msg_box "#### PLEASE READ CAREFULLY - INTRODUCTION ####\n
-This script is for configuring your PVE hosts. User input is required. The script will create, edit and/or change system files on your PVE host. When an optional default setting is provided you can accept our default (Recommended) by pressing ENTER on your keyboard. Or overwrite our default value by typing in your own value and then pressing ENTER to accept and to continue to the next step.
+This setup script is for configuring PVE hosts only. User input is required. The script will create, edit and/or change system files on PVE host '${HOSTNAME^}'. When an optional default setting is offered the User can accept this default value (Recommended) simply by pressing ENTER on the keyboard. Or overwrite any default value by typing in your own value and then pressing ENTER to accept and to continue to the next step.
 
-In the next steps you will asked to build, create or configure:
+Next steps or tasks include:
 
-  --  Configure your PVE host network interface card (NIC)
+  --  Configure a PVE host network interface card (NIC)
 
-  --  Create NFS and/or CIFS backend storage pools for your PVE hosts.
+  --  Create NFS and/or CIFS backend storage pools for the PVE hosts.
 
       OPTIONAL TASKS
 
-  --  Configure PVE mail alerts
+  --  Configure PVE email alerts
 
   --  Install and configure Fail2Ban."
 
 echo
-read -p "Proceed to setup your PVE host $HOSTNAME [y/n]? " -n 1 -r
+read -p "Proceed to setup PVE host '${HOSTNAME^}' [y/n]? " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   PVE_BUILD=0 >/dev/null
 else
   PVE_BUILD=1 >/dev/null
-  info "You have chosen to skip this step. Aborting configuration."
-  cleanup
+  info "The User has chosen to skip this step. Aborting script..."
+  trap cleanup
   exit 0
 fi
 echo
@@ -227,7 +234,7 @@ echo
 if [[ ! $(grep -qxF 'root:65604:100' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:100:1' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:1605:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1606:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1607:1' /etc/subuid) ]]; then
   section "Unprivileged LXC Containers and file permissions"
   while true; do
-    msg_box "With unprivileged LXC containers you will have issues with UIDs (User ID) and GIDs (Group ID) permissions with bind mounted shared data. With PVE the UIDs and GIDs are mapped to a different number range than on the host machine,usually root (uid 0) became uid 100000, 1 will be 100001 and so on. Our default User and Groups used on our NAS server, PVE VMs and LXC/CTs are:
+    msg_box "Unprivileged LXC containers have issues with UIDs (User ID) and GIDs (Group ID) permissions with bind mounted shared data. With PVE virtual machines the UIDs and GIDs are mapped to a different number range than on the host machine, where root (uid 0) becomes uid 100000, 1 will be 100001 and so on. Our default User and Groups used on our NAS server, PVE VMs and LXC/CTs are:
 
       --  GROUP: medialab (gid 65605) > USER: media (uid 1605) > APPS: JellyFin, NZBGet, Deluge, Sonarr, Radarr, LazyLibrarian, Flexget
 
@@ -235,7 +242,7 @@ if [[ ! $(grep -qxF 'root:65604:100' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:1
 
       --  GROUP: privatelab (gid 65607) > USER: private (uid 1607) > APPS: All things private.
       
-    Our high GID number (Group ID) is to cater for a Synology GID creation scheme. To maintain user permissions and rights to our NAS the fix is to create UID and GID mapping on all PVE hosts. We need to define two ranges:
+    Our high GID number (Group ID) is to cater for the Synology GID creation scheme. To maintain user permissions and rights to a NAS filse system the fix is to create UID and GID mapping on all PVE hosts. We need to define two ranges:
       
       1. One where the system IDs (i.e root uid 0) of the container can be mapped to an arbitrary range on the host for security reasons.
       
@@ -248,9 +255,9 @@ if [[ ! $(grep -qxF 'root:65604:100' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:1
         --  EDITS TO /etc/subgid
             root:65604:100 root:100:1
 
-    You MUST perform this fix if you want to use any of our VM or CT builds."
+    This fix ${UNDERLINE}must be performed${NC} if you want to use any of our PVE VM or CT builds."
     echo
-    read -p "Proceed to create your PVE host UID/GID mapping (RECOMMENDED) [y/n]? " -n 1 -r
+    read -p "Create the PVE host UID/GID mapping (A must, RECOMMENDED!!) [y/n]? " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
       msg "Performing UID & GID host mapping..."
@@ -268,28 +275,39 @@ if [[ ! $(grep -qxF 'root:65604:100' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:1
       echo
       break
     else
-      read -p "Please confirm. Are you sure (IT IS RECOMMENDED) [y/n]? " -n 1 -r
-      echo
-      if [[ $REPLY =~ ^[Yy]$ ]]; then
-        info "You have chosen to skip this step. Proceeding with no UID & GID mapping."
+      while true; do
+        read -p "Please confirm. Are you sure you want to skip this step [y/n]?: " -n 1 -r YN
         echo
-        break
-      else
-        info "Good decision. Try again..."
-        echo
-      fi
+        case $YN in
+          [Yy]*)
+            info "You have chosen to skip this step. Proceeding with no UID & GID mapping."
+            echo
+            break 2
+            ;;
+          [Nn]*)
+            info "Good decision. Try again..."
+            echo
+            break
+            ;;
+          *)
+            warn "Error! Entry must be 'y' or 'n'. Try again..."
+            echo
+            ;;
+        esac
+      done
     fi
   done
 fi
+
 
 #---- Setting PVE Host Variables
 section "Setting Variables"
 
 msg_box "#### PLEASE READ CAREFULLY - PVE BUILD TYPE ####\n
-We need to determine the type of PVE host you are building. There are two types of PVE builds:
+We need to determine the type of PVE host being built. There are two types of PVE builds:
 
   PRIMARY TYPE
-    --  Primary PVE host is your first Proxmox machine
+    --  Primary PVE host is the first Proxmox machine
 
     --  Primary PVE hostnames are denoted by '-01'
 
@@ -311,19 +329,19 @@ We need to determine the type of PVE host you are building. There are two types 
 # Set PVE Build Type
 TYPE01="${YELLOW}Primary${NC} - Primary PVE host."
 TYPE02="${YELLOW}Secondary${NC} - Secondary PVE host, cluster machine."
-PS3="Select the PVE host type you are building (entering numeric) : "
+PS3="Select the PVE host type being built (entering numeric) : "
 msg "Available options:"
 options=("$TYPE01" "$TYPE02")
 select menu in "${options[@]}"; do
   case $menu in
     "$TYPE01")
-      info "PVE host type is set as : $(echo $menu | awk '{print $1}')"
+      info "PVE host type is set : $(echo $menu | awk '{print $1}')"
       PVE_TYPE=0
       echo
       break
       ;;
     "$TYPE02")
-      info "PVE host type is set as : $(echo $menu | awk '{print $1}')"
+      info "PVE host type is set : $(echo $menu | awk '{print $1}')"
       PVE_TYPE=1
       echo
       break
@@ -333,7 +351,7 @@ select menu in "${options[@]}"; do
 done
 
 # Network Setup
-msg "You have the option to modify your PVE host network setup. Your PVE host machine is installed with the following NICs:"
+msg "Modify the PVE host '${HOSTNAME^}' network setup? The PVE host is installed with the following NICs:"
 # Show Available NICs
 if [[ $(ip -o link show | awk -F': ' '$0 ~ "eno[0-9]"{print $2}') ]]; then
   msg "      ONBOARD ETHERNET NIC"
@@ -358,7 +376,7 @@ else
   msg "  --  None."
 fi
 echo
-read -p "Setup or change your PVE host networking [y/n]?: " -n 1 -r
+read -p "Setup or change the PVE host networking [y/n]?: " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   PVE_NET=0
@@ -379,9 +397,9 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   ENO_CNT=$(if [ -z "$(ip -o link show | awk -F': ' '$0 ~ "eno[0-9]"{print $2}')" ]; then echo "0"; else ip -o link show | awk -F': ' '$0 ~ "eno[0-9]"{print $2}' | wc -l; fi)
   ENP_CNT=$(if [ -z "$(ip -o link show | awk -F': ' '$0 ~ "enp[0-9]"{print $2}')" ]; then echo "0"; else ip -o link show | awk -F': ' '$0 ~ "enp[0-9]"{print $2}' | wc -l; fi)
   msg "Select the ethernet NICs to enable..."
-  msg "Your PVE host has ${WHITE}$(($ENO_CNT+$ENP_CNT))x NICs${NC} ($(echo "$ENO_CNT")x onboard, $(echo "$ENP_CNT")x PCI) available for configuration."
-  if [ $(($ENO_CNT+$ENP_CNT)) = 3 ]; then msg "You also have enough NICs to create a single pfSense OpenVPN gateway."; elif [ $(($ENO_CNT+$ENP_CNT)) -ge 4 ]; then msg "You also have enough NICs to create dual pfSense OpenVPN gateways."; fi
-  msg "Now select which ethernet NICs and/or PCI Cards you want to enable. We recommend you select ONLY Intel brand NICs whenever possible."
+  msg "The PVE host has ${WHITE}$(($ENO_CNT+$ENP_CNT))x NICs${NC} ($(echo "$ENO_CNT")x onboard, $(echo "$ENP_CNT")x PCI) available for configuration."
+  if [ $(($ENO_CNT+$ENP_CNT)) = 3 ]; then msg "Enough NICs exist to create a single pfSense OpenVPN gateway."; elif [ $(($ENO_CNT+$ENP_CNT)) -ge 4 ]; then msg "Also enough NICs exist to create dual pfSense OpenVPN gateways."; fi
+  msg "Select which ethernet NICs and/or PCI Cards to enable. It's you select ONLY Intel brand NICs whenever possible."
 
   set +Eeuo pipefail #Required BEFORE menu shell script
   menu() {
@@ -402,7 +420,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     [[ "${choices[num]}" ]] && choices[num]="" || choices[num]="${GREEN}+${NC}"
   done
   echo
-  printf "Your selected ethernet NICs are:\n"; msg=" nothing"
+  printf "The selected ethernet NICs are:\n"; msg=" nothing"
   for i in ${!options[@]}; do
     [[ "${choices[i]}" ]] && { printf "${YELLOW}NIC(s):${NC} %s\n" "${options[i]}"; msg=""; } && echo $({ printf "%s" "${options[i]}"; msg=""; }) | awk '{print $2}' | while read line; do grep $line <(ip -o link show | awk -F': ' '$0 ~ "eno[0-9]|enp[0-9]"{print $2}'); done >> pve_nic_selection_var03
   done
@@ -413,42 +431,54 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   if [ $(($ENO_CNT+$ENP_CNT)) -ge 3 ]; then
     if [ $(($ENO_CNT+$ENP_CNT)) = 3 ] && [ ! -z "$(sort -u /proc/crypto | grep module | grep -i 'aesni_intel\|aes_x86_64')" ]; then
       msg "Prepare network for a pfSense OpenVPN Gateway..."
-      msg "This host can be made ready for hosting a pfSense OpenVPN Gateway server LXC.\nYour PVE host networking configuration would be:\n      PVE Management & Guest Bridge\n      --  vmbr0\n      pfSense OpenVPN Gateway\n      --  vmbr2 (WAN vlan2 for OpenVPN)\n      --  vmbr30 (VPN Gateway vlan30/40)"
+      msg "This host can be made ready for hosting a pfSense OpenVPN Gateway server LXC VM.\nThe PVE host networking configuration would be:\n      PVE Management & Guest Bridge\n      --  vmbr0\n      pfSense OpenVPN Gateway\n      --  vmbr2 (WAN vlan2 for OpenVPN)\n      --  vmbr30 (VPN Gateway vlan30/40)"
     elif [ $(($ENO_CNT+$ENP_CNT)) = 3 ] && [ -z "$(sort -u /proc/crypto | grep module | grep -i 'aesni_intel\|aes_x86_64')" ]; then
       msg "Prepare network for a pfSense OpenVPN Gateway..."
-      msg "This host can be made ready for hosting a pfSense OpenVPN Gateway server LXC.\nYour PVE host networking configuration would be:\n      PVE Management & Guest Bridge\n      --  vmbr0\n      pfSense OpenVPN Gateway\n      --  vmbr2 (WAN vlan2 for OpenVPN)\n      --  vmbr30 (VPN Gateway vlan30/40)"
-      warn "This hosts CPU does NOT support Intel Advanced Encryption Standard\nNew Instructions (AES-NI). Without AES-NI all OpenVPN connection will be slow.\nIt is NOT recommended you install a pfSense OpenVPN Gateway server on this host."
+      msg "This host can be made ready for hosting a pfSense OpenVPN Gateway server LXC.\nThe PVE host networking configuration would be:\n      PVE Management & Guest Bridge\n      --  vmbr0\n      pfSense OpenVPN Gateway\n      --  vmbr2 (WAN vlan2 for OpenVPN)\n      --  vmbr30 (VPN Gateway vlan30/40)"
+      warn "This hosts CPU does NOT support Intel Advanced Encryption Standard\nNew Instructions (AES-NI). Without AES-NI all OpenVPN connection will be slow.\nIt is NOT recommended to install a pfSense OpenVPN Gateway server on this host."
     elif [ $(($ENO_CNT+$ENP_CNT)) -ge 4 ] && [ ! -z "$(sort -u /proc/crypto | grep module | grep -i 'aesni_intel\|aes_x86_64')" ]; then
       msg "Prepare network for a pfSense OpenVPN Gateway..."
-      msg "This host can be made ready for hosting a pfSense OpenVPN Gateway server LXC.\nYour PVE host networking configuration would be:\n      PVE Management & Guest Bridge\n      --  vmbr0\n      pfSense OpenVPN Gateway\n      --  vmbr2 (WAN vlan2 for OpenVPN)\n      --  vmbr30 (VPN Gateway vlan30 - vpnworld)\n      --  vmbr40 (VPN Gateway vlan40 - vpnlocal)\nYour hosts networking can support two secure internet VPN Gateway exit points."
+      msg "This host can be made ready for hosting a pfSense OpenVPN Gateway server LXC.\nThe PVE host networking configuration would be:\n      PVE Management & Guest Bridge\n      --  vmbr0\n      pfSense OpenVPN Gateway\n      --  vmbr2 (WAN vlan2 for OpenVPN)\n      --  vmbr30 (VPN Gateway vlan30 - vpnworld)\n      --  vmbr40 (VPN Gateway vlan40 - vpnlocal)\nThe hosts networking can support two secure internet VPN Gateway exit points."
     elif [ $(($ENO_CNT+$ENP_CNT)) -ge 4 ] && [ -z "$(sort -u /proc/crypto | grep module | grep -i 'aesni_intel\|aes_x86_64')" ]; then
       msg "Prepare network for a pfSense OpenVPN Gateway..."
-      msg "This host can be made ready for hosting a pfSense OpenVPN Gateway server LXC.\nYour PVE host networking configuration would be:\n      PVE Management & Guest Bridge\n      --  vmbr0\n      pfSense OpenVPN Gateway\n      --  vmbr2 (WAN vlan2 for OpenVPN)\n      --  vmbr30 (VPN Gateway vlan30 - vpnworld)\n      --  vmbr40 (VPN Gateway vlan40 - vpnlocal)\nYour hosts networking can support two secure internet VPN Gateway exit points."
-      warn "This hosts CPU does NOT support Intel Advanced Encryption Standard\nNew Instructions (AES-NI). Without AES-NI all OpenVPN connection will be slow.\nIt is NOT recommended you install a pfSense OpenVPN Gateway server on this host."
+      msg "This host can be made ready for hosting a pfSense OpenVPN Gateway server LXC.\nThe PVE host networking configuration would be:\n      PVE Management & Guest Bridge\n      --  vmbr0\n      pfSense OpenVPN Gateway\n      --  vmbr2 (WAN vlan2 for OpenVPN)\n      --  vmbr30 (VPN Gateway vlan30 - vpnworld)\n      --  vmbr40 (VPN Gateway vlan40 - vpnlocal)\nThe hosts networking can support two secure internet VPN Gateway exit points."
+      warn "This hosts CPU does NOT support Intel Advanced Encryption Standard\nNew Instructions (AES-NI). Without AES-NI all OpenVPN connection will be slow.\nIt is NOT recommended to install a pfSense OpenVPN Gateway server on this host."
     fi
     echo
-    read -p "Prepare this PVE host network for a pfSense OpenVPN Gateway LXC [y/n]?: " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-      PVE_PFSENSE=0
-      info "A pfSense OpenVPN Gateway network setup will be created."
+    while true; do
+      read -p "Prepare this PVE host network for a pfSense OpenVPN Gateway LXC [y/n]?: " -n 1 -r YN
       echo
-    else
-      PVE_PFSENSE=1
-      info "You have chosen to skip this step."
-      echo
-    fi
+      case $YN in
+        [Yy]*)
+          PVE_PFSENSE=0
+          info "A pfSense OpenVPN Gateway network setup will be created."
+          echo
+          break
+          ;;
+        [Nn]*)
+          PVE_PFSENSE=1
+          info "You have chosen to skip this step."
+          echo
+          break
+          ;;
+        *)
+          warn "Error! Entry must be 'y' or 'n'. Try again..."
+          echo
+          ;;
+      esac
+    done
   fi
+
 
   # Ethernet Adapter Speeds
   if [[ $(dmesg | grep ixgbe) ]]; then
     msg "Select ethernet NIC speeds..."
-    msg "We need to determine the ethernet speed of your selected integrated onboard and/or PCI card network NICs. We have identified your PVE host may have ${WHITE}10GbE ethernet${NC} capability."
+    msg "We need to determine the ethernet speed of the selected/chosen integrated onboard and/or PCI card network NICs. We have identified your PVE host may have ${WHITE}10GbE ethernet${NC} capability."
   else
     msg "Select ethernet NIC speeds..."
-    msg "We need to determine the ethernet speed of your selected integrated onboard and/or PCI card network NICs."
+    msg "We need to determine the ethernet speed of the selected/chosen integrated onboard and/or PCI card network NICs."
   fi
-  read -p "Do you have 10GbE/10G/SFP+ ethernet capability [y/n]?: " -n 1 -r
+  read -p "Are the NICs 10GbE/10G/SFP+ ethernet capable [y/n]?: " -n 1 -r
   echo
   if [[ $REPLY =~ ^[Yy]$ ]]; then
     # Identifying each NIC speed
@@ -489,7 +519,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   # Set PVE Host IP Address
   msg "Set PVE host IPv4 address..."
   while true; do
-  read -p "Enter your new PVE host IPv4 address: " -e -i `hostname -i`/$(ip addr show |grep -w inet |grep -v 127.0.0.1|awk '{ print $2}'| cut -d "/" -f 2) PVE_HOST_IP
+  read -p "Enter a new PVE host IPv4 address: " -e -i `hostname -i`/$(ip addr show |grep -w inet |grep -v 127.0.0.1|awk '{ print $2}'| cut -d "/" -f 2) PVE_HOST_IP
   if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ] && [ $(echo "$PVE_HOST_IP" | sed  's/\/.*//g') != $(hostname -i) ] && [ $(ping -s 1 -c 2 "$(echo "$PVE_HOST_IP" | sed  's/\/.*//g')" > /dev/null; echo $?) = 0 ]; then
     if [ $(echo "$PVE_HOST_IP" | sed  's/.*\///') -ge 1 ] && [ $(echo "$PVE_HOST_IP" | sed  's/.*\///') -le 32 ]; then
       warn "There are problems with your input:\n1. Your IP address $(echo "$PVE_HOST_IP" | sed  's/\/.*//g') is in use by another network device."
@@ -574,7 +604,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   done
   
   # Set PVE host Gateway
-  msg "Set your PVE host gateway...\nExisting PVE host Gateway is: ${WHITE}$(ip route show | grep default | awk '{print $3}')${NC}."
+  msg "Set the PVE host gateway...\nExisting PVE host Gateway is: ${WHITE}$(ip route show | grep default | awk '{print $3}')${NC}."
   while true; do
   read -p "Enter a Gateway IPv4 address: " -e -i $(ip route show | grep default | awk '{print $3}') PVE_GW
   if [ $(expr "$PVE_GW" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null; echo $?) == 0 ] && [ $(ping -s 1 -c 2 "$(echo "$PVE_GW")" > /dev/null; echo $?) = 0 ]; then
@@ -623,7 +653,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   # done
 
   # Set PVE Hostname
-  msg "Set your PVE hostname...\nExisting PVE hostname is: ${WHITE}$HOSTNAME${NC}."
+  msg "Set the PVE hostname...\nExisting PVE hostname is: ${WHITE}$HOSTNAME${NC}."
   read -p "Do you want to change your hostname [y/n]?: " -n 1 -r
   echo
   if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -1108,32 +1138,58 @@ if [ $PVE_TYPE = 0 ]; then
 
   We need to set some variables. The next steps requires your input. You can accept our default values by pressing ENTER on your keyboard. Or overwrite our default value by typing in your own value and then pressing ENTER to accept and to continue to the next step."
   echo
-  read -p "Create PVE NFS storage mounts [y/n]?: " -n 1 -r
-  echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
-    export ADD_NFS_MOUNTS=0 >/dev/null
-    export PARENT_EXEC_PVE_ADD_NFS_MOUNTS=0 >/dev/null
-    export PVE_HOSTNAME >/dev/null
-    source $DIR/pve_host_add_nfs_mounts.sh
-  else
-    ADD_NFS_MOUNTS=1 >/dev/null
-    info "You have chosen to skip this step."
-  fi
-  echo
-  echo
-  read -p "Create PVE CIFS storage mounts [y/n]?: " -n 1 -r
-  echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
-    export ADD_CIFS_MOUNTS=0 >/dev/null
-    export PARENT_EXEC_PVE_ADD_CIFS_MOUNTS=0 >/dev/null
-    export PVE_HOSTNAME >/dev/null
-    source $DIR/pve_host_add_cifs_mounts.sh
-  else
-    ADD_CIFS_MOUNTS=1 >/dev/null
-    info "You have chosen to skip this step."
-  fi
-  echo
+  # Create NFS storage mounts
+  while true; do
+    read -p "Create PVE NFS storage mounts [y/n]?: "  -n 1 -r YN
+    echo
+    case $YN in
+      [Yy]*)
+        export ADD_NFS_MOUNTS=0 >/dev/null
+        export PARENT_EXEC_PVE_ADD_NFS_MOUNTS=0 >/dev/null
+        export PVE_HOSTNAME >/dev/null
+        source $DIR/pve_host_add_nfs_mounts.sh
+        echo
+        break
+        ;;
+      [Nn]*)
+        ADD_NFS_MOUNTS=1 >/dev/null
+        info "You have chosen to skip this step."
+        echo
+        break
+        ;;
+      *)
+        warn "Error! Entry must be 'y' or 'n'. Try again..."
+        echo
+        ;;
+    esac
+  done
+  # Create CIFS storage mounts
+  while true; do
+    read -p "Create PVE CIFS storage mounts [y/n]?: "  -n 1 -r YN
+    echo
+    case $YN in
+      [Yy]*)
+        export ADD_CIFS_MOUNTS=0 >/dev/null
+        export PARENT_EXEC_PVE_ADD_CIFS_MOUNTS=0 >/dev/null
+        export PVE_HOSTNAME >/dev/null
+        source $DIR/pve_host_add_cifs_mounts.sh
+        echo
+        break
+        ;;
+      [Nn]*)
+        ADD_CIFS_MOUNTS=1 >/dev/null
+        info "You have chosen to skip this step."
+        echo
+        break
+        ;;
+      *)
+        warn "Error! Entry must be 'y' or 'n'. Try again..."
+        echo
+        ;;
+    esac
+  done
 fi
+
 
 #---- Install and Configure SSMTP Email Alerts
 if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ]; then
@@ -1160,32 +1216,48 @@ if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ]; then
   If you choose to proceed have your SMTP server credentials available. This script will configure your PVE nodes Postfix SMTP server."
   echo
   while true; do
-    read -p "Install and configure Postfix and email alerts [y/n]?: " -n 1 -r
+    read -p "Install and configure Postfix and email alerts [y/n]?: "  -n 1 -r YN
     echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-      echo
-      read -p "Do you have your Gmail App or Mailgun credentials ready [y/n]?: " -n 1 -r
-      echo
-      if [[ $REPLY =~ ^[Yy]$ ]]; then
-        msg "Setting up Postfix..."
-        export SETUP_POSTFIX=0 >/dev/null
-        export PARENT_EXEC_PVE_SETUP_POSTFIX=0 >/dev/null
-        export PVE_HOSTNAME >/dev/null
-        source $DIR/pve_host_setup_postfix.sh
+    case $YN in
+      [Yy]*)
+        while true; do
+          read -p "Do you have your Gmail App or Mailgun credentials ready [y/n]?: "  -n 1 -r YN
+          echo
+          case $YN in
+            [Yy]*)
+              msg "Setting up Postfix..."
+              export SETUP_POSTFIX=0 >/dev/null
+              export PARENT_EXEC_PVE_SETUP_POSTFIX=0 >/dev/null
+              export PVE_HOSTNAME >/dev/null
+              source $DIR/pve_host_setup_postfix.sh
+              echo
+              break 2
+              ;;
+            [Nn]*)
+              warn "In the next steps you must have your 16 digit Gmail App Password OR Mailgun credentials ready for input to continue. Try again..."
+              echo
+              break
+              ;;
+            *)
+              warn "Error! Entry must be 'y' or 'n'. Try again..."
+              echo
+              ;;
+          esac
+        done
+        ;;
+      [Nn]*)
+        SETUP_POSTFIX=1 >/dev/null
+        info "You have chosen to skip this step."
         echo
         break
-      else
-        warn "In the next steps you must have your 16 digit Gmail App Password OR Mailgun credentials ready for input to continue. Try again..."
+        ;;
+      *)
+        warn "Error! Entry must be 'y' or 'n'. Try again..."
         echo
-      fi
-    else
-      SETUP_POSTFIX=1 >/dev/null
-      info "You have chosen to skip this step."
-      echo
-      break
-    fi
-    echo
+        ;;
+    esac
   done
+
   # Activate E-Mail Notification & Email Alerts
   if [ $SETUP_POSTFIX = 0 ]; then
     # zfs-zed SW
@@ -1217,19 +1289,31 @@ if [ $PVE_TYPE = 0 ]; then
 
   2. Generate a a new set of SSH key pairs. If you choose to append your existing SSH Public Key to your PVE host you will be prompted to paste your Public Key into this terminal console. Use your mouse right-click to paste."
   echo
-  read -p "Configure your PVE host for SSH key access [y/n]?: " -n 1 -r
-  echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
+  while true; do
+    read -p "Configure your PVE host for SSH key access [y/n]?: "  -n 1 -r YN
     echo
-    export SETUP_SSHKEY=0 >/dev/null
-    export PARENT_EXEC_PVE_SETUP_SSHKEY=0 >/dev/null
-    export PVE_HOSTNAME >/dev/null
-    source $DIR/pve_host_setup_sshkey.sh
-  else
-    SETUP_SSHKEY=1 >/dev/null
-    info "You have chosen to skip this step."
-  fi
-  echo
+    case $YN in
+      [Yy]*)
+        echo
+        export SETUP_SSHKEY=0 >/dev/null
+        export PARENT_EXEC_PVE_SETUP_SSHKEY=0 >/dev/null
+        export PVE_HOSTNAME >/dev/null
+        source $DIR/pve_host_setup_sshkey.sh
+        echo
+        break
+        ;;
+      [Nn]*)
+        SETUP_SSHKEY=1 >/dev/null
+        info "You have chosen to skip this step."
+        echo
+        break
+        ;;
+      *)
+        warn "Error! Entry must be 'y' or 'n'. Try again..."
+        echo
+        ;;
+    esac
+  done
 fi
 
 #---- Install and Configure Fail2Ban
@@ -1251,19 +1335,31 @@ Our default Fail2ban configuration sets the following rulesets:
   --  PVE EMAIL ALERTS
       Send email alerts of banned login attempts. (requires working PVE Postfix SMTP server)"
   echo
-  read -p "Install and configure Fail2ban [y/n]?: " -n 1 -r
-  echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
+  while true; do
+    read -p "Install and configure Fail2ban [y/n]?: "  -n 1 -r YN
     echo
-    export SETUP_FAIL2BAN=0 >/dev/null
-    export PARENT_EXEC_PVE_SETUP_FAIL2BAN=0 >/dev/null
-    export PVE_HOSTNAME >/dev/null
-    source $DIR/pve_host_setup_fail2ban.sh
-  else
-    SETUP_FAIL2BAN=1 >/dev/null
-    info "You have chosen to skip this step."
-  fi
-  echo
+    case $YN in
+      [Yy]*)
+        echo
+        export SETUP_FAIL2BAN=0 >/dev/null
+        export PARENT_EXEC_PVE_SETUP_FAIL2BAN=0 >/dev/null
+        export PVE_HOSTNAME >/dev/null
+        source $DIR/pve_host_setup_fail2ban.sh
+        echo
+        break
+        ;;
+      [Nn]*)
+        SETUP_FAIL2BAN=1 >/dev/null
+        info "You have chosen to skip this step."
+        echo
+        break
+        ;;
+      *)
+        warn "Error! Entry must be 'y' or 'n'. Try again..."
+        echo
+        ;;
+    esac
+  done
 fi
 
 
@@ -1300,23 +1396,38 @@ if [ $PVE_NET = 0 ] && [ "$PVE_HOSTNAME" != "echo $HOSTNAME" ] || [ "$PVE_HOST_I
   msg "If you cannot connect to your PVE host after rebooting check the ethernet LAN cable is connected to correct PVE hardware NIC(s). You may have re-assigned PVE default LAN vmbr0 to a different hardware NIC during this setup."
   echo
   msg "You will now be prompted to reboot this PVE host (RECOMMENDED). If you choose NOT to reboot now then you MUST at a later stage."
-  read -p "Reboot this PVE host now (RECOMMENDED) [y/n]?: " -n 1 -r
   echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
-    msg "Performing a reboot in 3 seconds...\n(your ssh connection will be lost)"
+  while true; do
+    read -p "Reboot the PVE host now (RECOMMENDED) [y/n]?: "  -n 1 -r YN
     echo
-    # Cleanup
-    cleanup
-    sleep 3
-    reboot
-  else
-    info "You have chosen NOT to perform a PVE system reboot. Remember you MUST perform a system reboot at some stage to invoke the changes!"
-    # Cleanup
-    cleanup
-  fi
+    case $YN in
+      [Yy]*)
+        REBOOT_NOW=0
+        msg "Performing a reboot in 3 seconds...\n(your ssh connection will be lost)"
+        echo
+        break
+        ;;
+      [Nn]*)
+        REBOOT_NOW=1
+        info "You have chosen NOT to perform a PVE system reboot. Remember you MUST perform a system reboot at some stage to invoke the changes!"
+        echo
+        break
+        ;;
+      *)
+        warn "Error! Entry must be 'y' or 'n'. Try again..."
+        echo
+        ;;
+    esac
+  done
 elif [ $PVE_NET = 1 ]; then
   # Same hostname, IP address
   msg "Success. Your PVE host is nearly fully configured. To make a SSH connection your login credentials are:\n    Username: ${YELLOW}root${NC}\n$(if [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin prohibit-password") ]]; then echo "    SSH security method: ${YELLOW}SSH private key only.${NC}\n    SSH Private Key: ${YELLOW}You must have it.${NC}\n    Password: ${YELLOW}Not Permitted${NC} (SSH Private Key only).";elif [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin yes") ]]; then echo "    SSH security method: ${YELLOW}SSH private key & Password.${NC}\n    SSH Private Key: ${YELLOW}You must have it.${NC}\n    Password: ${YELLOW}You must have it.${NC}";elif [[ $(cat /etc/ssh/sshd_config | grep "^PasswordAuthentication yes") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PubkeyAuthentication no") ]] && [[ $(cat /etc/ssh/sshd_config | grep "^PermitRootLogin yes") ]]; then echo "    SSH security method: ${YELLOW}Password only.${NC}";fi)\n    PVE Server LAN IP Address: ${YELLOW}`hostname -i`${NC}\n    Terminal SSH CLI command: ${YELLOW}ssh root@`hostname -i`${NC}\n\nThe PVE web interface can be reached via ${YELLOW}https://`hostname -i`:8006${NC}\n    Default login username: ${YELLOW}root${NC}\n    Password: ${YELLOW}You must have it.${NC}\nThe root user password is what you specified during the PVE installation process.\n\n$(if [ $SETUP_SSHKEY=0 ]; then echo "To finish we need to restart some system services.\n    Restarting service: ${YELLOW}SSHd${NC}";service sshd restart >/dev/null 2>&1;fi)"
-  # Cleanup
+fi
+
+#---- Finish Line ------------------------------------------------------------------
+
+# Cleanup
+if [ ${REBOOT_NOW} == 0 ]; then
   cleanup
+  reboot
 fi

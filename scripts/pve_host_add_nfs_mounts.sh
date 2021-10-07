@@ -92,7 +92,7 @@ fi
 section "Check NFS Server exports"
 
 while true; do
-  read -p "Enter your NFS Server IPv4 address: " -e -i 192.168.1.10 NAS_IP
+  read -p "Enter your NFS NAS Server IPv4 address: " -e -i 192.168.1.10 NAS_IP
   if [ $(expr "$NAS_IP" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null; echo $?) == 0 ] && [ $(ping -s 1 -c 2 "$(echo "$NAS_IP")" > /dev/null; echo $?) = 0 ]; then
   info "NFS Server IPv4 address is set: ${YELLOW}$NAS_IP${NC}."
   echo
