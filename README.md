@@ -1,16 +1,16 @@
 <H1>PVE Host Setup</H1>
 
-This guide is for building and configuring PVE hardware.
+This is a guide for configuring PVE host hardware. We have made a 'Easy Script' to automate the installation of software.
 
-As with all our guides there is a Easy Script to automate your PVE build, configuration and installation tasks. The Easy Script will offer the installer options based on your available hardware. The same Easy Script works on both primary and secondary PVE hosts.
+Each Easy Script is optioned depending on your hardware specifications. Easy Script will run on both primary and secondary (cluster) PVE hosts.
 
-But first step is to prepare your network and check our prerequisite requirements before running our Easy Script. The Easy Script will configure your storage, ZFS cache, networking and make system changes to your hardware. After running our Easy Script you should be ready to install and create our suite of PVE containers (CTs). Therefore its important you first read and follow our prerequisite guide.
+The first step is to prepare your LAN network and check it meets our prerequisite list before running a Easy Script. The Easy Script will configure your storage, ZFS cache, networking and make system changes to your hardware. After running our Easy Script you should be ready to install any of our custom PVE containers (CTs). Its important you first read and follow the prerequisite guide.
 
-Our Easy Script will prompt the installer with options:
+Easy Script will prompt the installer with options:
 
 **Options for Primary PVE Hosts only** - Your Main PVE Host (PVE-01)
 - Configure PVE host networking ready for installing pfSense
-  - requires a minimum of 3x Intel Ethernet NICs
+  - requires a minimum of 3x Intel Ethernet NICs ( Intel NICs are preferred)
 - Configure PVE host networking (no pfSense)
 - Add PVE storage by creating a CIFS backend storage pool
 - Add PVE storage by creating a NFS backend storage pool
@@ -39,7 +39,7 @@ Other prerequisites (information the installer should have readily available bef
   - Email account credentials
   - MailGun credentials
 
-<h4>Easy Script</h4>
+<h4>List of Easy Scripts</h4>
 
 Our single Easy Script can be used on both primary and secondary PVE hosts. Your user input is required. The script will create, edit and/or change system files on your PVE host. When an optional default setting is provided you can accept our default (recommended) by pressing ENTER on your keyboard. Or overwrite our default value by typing in your own value and then pressing ENTER to accept and to continue to the next step.
 
@@ -62,11 +62,11 @@ The available options are different between primary and secondary hosts. Its bes
 
 Easy Scripts are based on bash scripting. Simply `Cut & Paste` our Easy Script command into your terminal window, press `Enter` and follow the prompts and terminal instructions. But PLEASE first read our guide so you fully understand each scripts prerequisites and your input requirements.
 
-**Installation**
+**Installation** (Recommended)
 This Easy Script is for primary and secondary PVE hosts. It gives the installer options to run our option add-ons to full configure your PVE hosts.
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup.sh)"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/pve_host_setup_installer.sh)"
 ```
 **Add-on** (optional)
 Optional Add-on Easy Scripts can be run anytime. They are for adding new PVE NAS storage mounts, installing Postfix email alerts and other services.
@@ -104,9 +104,10 @@ bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup
 <hr>
 
 <h4>Table of Contents</h4>
+
 <!-- TOC -->
 
-- [1. Preparing your Hardware](#1-preparing-your-hardware)
+- [1. Prepare your Hardware](#1-prepare-your-hardware)
     - [1.1. PVE OS Installation](#11-pve-os-installation)
         - [1.1.1. PVE OS Install - Primary Host - (1-2)x SSD OS & ZFS Cache ( + ZFS File Server)](#111-pve-os-install---primary-host---1-2x-ssd-os--zfs-cache---zfs-file-server)
         - [1.1.2. PVE OS Install - Primary Host - (1-2)x SSD OS & (1-2)x SSD ZFS Cache ( + ZFS File Server)](#112-pve-os-install---primary-host---1-2x-ssd-os--1-2x-ssd-zfs-cache---zfs-file-server)
@@ -141,18 +142,17 @@ bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup
     - [6.3. Simple bash script to APT update all LXC containers which are stopped or running status](#63-simple-bash-script-to-apt-update-all-lxc-containers-which-are-stopped-or-running-status)
 
 <!-- /TOC -->
-
 <hr>
 
-# 1. Preparing your Hardware
+# 1. Prepare your Hardware
 
-PVE hosts can be built using any x86 hardware with a few conditions. Always use Intel NIC devices (clones seem to be okay too). And only use enterprise grade SSD drives when creating ZFS Cache builds.
+PVE hosts can be any x86 hardware with a few conditions. Best use Intel NIC devices (clones seem to be okay too). And only use enterprise grade SSD drives when creating ZFS Cache builds.
 
 In this guide you have the option to configure a PVE host which also serves as a backend ZFS file server with optional SSD cache. PVE has inbuilt ZFS to create Raid-Z storage tanks featuring as many disks as you like. You can read about our containerized NAS solution [here](https://github.com/ahuacate/pve-zfs-nas) which uses a PVE Ubuntu CT as the frontend.
 
-We also have a primary PVE host build option, for hardware with 3x or more Intel NICs, for pfSense. With pfSense your can create OpenVPN Gateways, HAProxy servers and more using multiple NICs and VLANs. Our pfSense setup requires L2/L3 switches uses VLANs.
+We also have a primary PVE host build option, for hardware with 3x or more Intel ethernet NICs, for running pfSense. With pfSense you can install OpenVPN Gateways, HAProxy servers and more using multiple NICs and VLANs. Our pfSense setup requires L2/L3 switches and VLANs.
 
-Secondary PVE hosts require only a 1x NIC. A minimum of two secondary PVE hosts is needed to form a quorum in the event a PVE host fails. Note: The downside is when your primary PVE host goes offline then your PfSense services (i.e. OpenVPN, HAProxy) are also offline.
+Secondary PVE hosts need only a 1x ethernet NIC. A minimum of two secondary PVE hosts is needed to form a quorum in the event a PVE host fails. Note: The downside is when your primary PVE host goes offline then your PfSense services (i.e. OpenVPN, HAProxy) are also offline.
 
 Your PVE host hardware specifications are determined by your mainboard type.
 
@@ -704,21 +704,21 @@ On creation of your PVE pfSense VM you will create a PVE VirtIO (paravirtualized
 
 | pfSense Network Device ID    | Settings                                          |
 |------------------------------|---------------------------------------------------|
-| <> Network Device (net0)     | virtio=3A:33:39:66:31:35,bridge=vmbr0,firewall=1  |
-| <> Network Device (net1)     | virtio=1A:14:AE:3B:7B:35,bridge=vmbr2,firewall=1  |
-| <> Network Device (net2)     | virtio=9E:1F:F9:5A:69:D1,bridge=vmbr30,firewall=1 |
+| <> Network Device (net0)     | virtio=3A:13:29:66:31:35,bridge=vmbr0,firewall=1  |
+| <> Network Device (net1)     | virtio=1A:14:AH:3B:7B:35,bridge=vmbr2,firewall=1  |
+| <> Network Device (net2)     | virtio=9E:3F:F9:5A:77:D1,bridge=vmbr30,firewall=1 |
 | *Optional 4x LAN NIC below:* |                                                   |
-| <> Network Device (net3)     | virtio=42:09:A0:3F:8C:8A,bridge=vmbr40,firewall=1 |
+| <> Network Device (net3)     | virtio=12:79:A0:1F:2C:8A,bridge=vmbr40,firewall=1 |
 
 So when you configure and setup pfSense your pfSense Interfaces Assignments in the pfSense web management frontend will show:
 
 | pfSense Interface                 | Network port               |
 |-----------------------------------|----------------------------|
-| LAN                               | vtnet0 (3A:33:39:66:31:35) |
-| WAN ( *i.e VLAN2* )               | vtnet1 (1A:14:AE:3B:7B:35) |
-| OPT1 ( *i.e Gateway for VLAN30* ) | vtnet2 (9E:1F:F9:5A:69:D1) |
+| LAN                               | vtnet0 (3A:13:29:66:31:35) |
+| WAN ( *i.e VLAN2* )               | vtnet1 (1A:14:AH:3B:7B:35) |
+| OPT1 ( *i.e Gateway for VLAN30* ) | vtnet2 (9E:3F:F9:5A:77:D1) |
 | *Optional 4x LAN NIC below:*      |                            |
-| OPT2 ( *i.e Gateway for VLAN40* ) | vtnet3 (42:09:A0:3F:8C:8A) |
+| OPT2 ( *i.e Gateway for VLAN40* ) | vtnet3 (12:79:A0:1F:2C:8A) |
 
 When you install pfSense on host PVE-01 you must be assigned a LAN, WAN and your VPN gateway interfaces. Make sure the PVE VM Virtio MAC address corresponds with PVE Linux Bridge vmbr(x) ad is correctly assigned to the pfSense vtnet(x) assignments.
 
@@ -737,8 +737,8 @@ For HAProxy to work you must authorize UniFi VLAN2 (WAN in pfSense addon service
 | IPv4                           | 192.168.50.117 | *Lidarr Server*        |
 | IPv4                           | 192.168.50.118 | *Lazylibrarian Server* |
 | IPv4                           | 192.168.50.119 | *Ombi Server*          |
+| IPv4                           | 192.168.50.121 | *Kodi-rsync Server*   |
 | IPv4                           | 192.168.80.122 | *Syncthing Server*     |
-| IPv4                           | 192.168.50.123 | *Media-rsync Server*   |
 
 And click `Apply Changes`.
 

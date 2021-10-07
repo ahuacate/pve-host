@@ -25,6 +25,8 @@ else
   echo
   exit 0
 fi
+# First update
+apt-get update
 # Run Bash Header
 source $PVE_SOURCE/pvesource_bash_defaults.sh
 # CIDR to netmask conversion
@@ -116,15 +118,15 @@ done
 echo
 
 msg "Performing PVE update..."
-apt -y update > /dev/null 2>&1
+apt-get -y update > /dev/null 2>&1
 msg "Performing PVE upgrade..."
-apt -y upgrade > /dev/null 2>&1
+apt-get -yqq upgrade > /dev/null 2>&1
 msg "Performing PVE full upgrade (Linux Kernel if required)..."
-apt -y full-upgrade > /dev/null 2>&1
+apt-get -y full-upgrade > /dev/null 2>&1
 msg "Performing PVE clean..."
-apt -y clean > /dev/null 2>&1
+apt-get -y clean > /dev/null 2>&1
 msg "Performing PVE autoremove..."
-apt -y autoremove > /dev/null 2>&1
+apt-get -y autoremove > /dev/null 2>&1
 
 # nbtscan SW
 if [ $(dpkg -s nbtscan >/dev/null 2>&1; echo $?) = 0 ]; then
@@ -1201,60 +1203,6 @@ if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ]; then
     fi
     sed -i 's|#ZED_EMAIL_ADDR.*|ZED_EMAIL_ADDR="root"|g' /etc/zfs/zed.d/zed.rc
   fi
-fi
-
-#---- Activate E-Mail Notification & Email Alerts
-if [ $PVE_TYPE = 0 ] || [ $PVE_TYPE = 1 ] && [ $SETUP_POSTFIX = 0 ]; then
-  section "Activate E-Mail Notification & Alerts."
-
-  msg_box "#### PLEASE READ CAREFULLY - POSTFIX & EMAIL ALERTS ####\n
-  Send email alerts about your PVE host to the system’s designated administrator. Be alerted about unwarranted login attempts and other system critical alerts. Proxmox is preinstalled with Postfix SMTP server which we use for sending your PVE nodes critical alerts.
-
-  SMTP is a simple Mail Transfer Agent (MTA) while easy to setup it requires the following prerequisites and credentials:
-
-    --  SMTP SERVER
-        You require a SMTP server that can receive the emails from your machine and send them to the designated administrator. If you use Gmail SMTP server its best to enable 'App Passwords'. An 'App Password' is a 16-digit passcode that gives an app or device permission to access your Google Account. Or you can use a mailgun.com flex account relay server (Recommended).
-        
-    --  REQUIRED SMTP SERVER CREDENTIALS
-        1. Designated administrator email address (i.e your working admin email address)
-
-        2. SMTP server address (i.e smtp.gmail.com or smtp.mailgun.org)
-
-        3. SMTP server port (i.e gmail port is 587 and mailgun port is 587)
-
-        4. SMTP server username (i.e MyEmailAddress@gmail.com or postmaster@sandboxa6ac6.mailgun.org)
-    
-        5. SMTP server default password (i.e your Gmail App Password or mailgun SMTP password)
-
-  If you choose to proceed have your SMTP server credentials available. This script will configure your PVE nodes Postfix SMTP server."
-  echo
-  while true; do
-    read -p "Install and configure Postfix and email alerts [y/n]?: " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-      echo
-      read -p "Do you have your Gmail App or Mailgun credentials ready [y/n]?: " -n 1 -r
-      echo
-      if [[ $REPLY =~ ^[Yy]$ ]]; then
-        msg "Setting up Postfix..."
-        export SETUP_POSTFIX=0 >/dev/null
-        export PARENT_EXEC_PVE_SETUP_POSTFIX=0 >/dev/null
-        export PVE_HOSTNAME >/dev/null
-        source $DIR/pve_host_setup_postfix.sh
-        echo
-        break
-      else
-        warn "In the next steps you must have your 16 digit Gmail App Password OR Mailgun credentials ready for input to continue. Try again..."
-        echo
-      fi
-    else
-      SETUP_POSTFIX=1 >/dev/null
-      info "You have chosen to skip this step."
-      echo
-      break
-    fi
-    echo
-  done
 fi
 
 
