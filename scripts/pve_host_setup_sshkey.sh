@@ -33,14 +33,16 @@ source $PVE_SOURCE/pvesource_bash_defaults.sh
 
 # Easy Script Section Header Body Text
 SECTION_HEAD='PVE Host SSH Keys'
+
 # Check Ahuacate Check variables
 if [[ $(cat /etc/postfix/main.cf | grep "### Ahuacate_Check=0.*") ]]; then
   SMTP_STATUS=0
 elif [[ ! $(cat /etc/postfix/main.cf | grep "### Ahuacate_Check=0.*") ]]; then
   SMTP_STATUS=1
 fi
-# Check PVE Hostname variable
-if [ -z "${SETUP_SSHKEY+x}" ]; then
+
+# Check for PVE Hostname mod
+if [ -z "${HOSTNAME_FIX+x}" ]; then
   PVE_HOSTNAME=$HOSTNAME
 fi
 
@@ -48,42 +50,36 @@ fi
 #---- Other Files ------------------------------------------------------------------
 #---- Body -------------------------------------------------------------------------
 
-#---- Install and Configure SSH Authorised Keys
+#---- Introduction
+section "Introduction"
 
-if [ -z "${SETUP_SSHKEY+x}" ] && [ -z "${PARENT_EXEC_PVE_SETUP_SSHKEY+x}" ]; then
-  section "Setup Proxmox for SSH Authorized Key access"
+msg_box "#### PLEASE READ CAREFULLY - CONFIGURING SSH AUTHORIZED KEYS ####\n
+PVE System Administrators should use SSH keys to access PVE root accounts over SSH. PVE requires all SSH keys to be in the OpenSSH format. Your PVE host SSH key choices are:
 
-  msg_box "#### PLEASE READ CAREFULLY - CONFIGURING SSH AUTHORIZED KEYS ####\n
-  PVE System Administrators should use SSH keys to access PVE root accounts over SSH. PVE requires all SSH keys to be in the OpenSSH format. Your PVE host SSH key choices are:
+1. Append or add an existing SSH Public Key to PVE hosts authorized keys file.
 
-  1. Append or add an existing SSH Public Key to PVE hosts authorized keys file.
-
-  2. Generate a a new set of SSH key pairs. If the User chooses to append a existing SSH Public Key to the PVE host you will be prompted to paste the SSH Public Key into this terminal console. Use your mouse right-click to paste."
+2. Generate a a new set of SSH key pairs. If the User chooses to append a existing SSH Public Key to the PVE host you will be prompted to paste the SSH Public Key into this terminal console. Use your mouse right-click to paste."
+echo
+while true; do
+  read -p "Configure this PVE host for SSH key access [y/n]?: " -n 1 -r YN
   echo
-  while true; do
-    read -p "Configure this PVE host for SSH key access [y/n]?: " -n 1 -r YN
-    echo
-    case $YN in
-      [Yy]*)
-        msg "Setting up SSH Authorized Keys..."
-        SETUP_SSHKEY=0 >/dev/null
-        echo
-        break
-        ;;
-      [Nn]*)
-        SETUP_SSHKEY=1 >/dev/null
-        info "The User has chosen to skip this step."
-        cleanup
-        exit 0
-        break
-        ;;
-      *)
-        warn "Error! Entry must be 'y' or 'n'. Try again..."
-        echo
-        ;;
-    esac
-  done
-fi
+  case $YN in
+    [Yy]*)
+      msg "Setting up SSH Authorized Keys..."
+      echo
+      break
+      ;;
+    [Nn]*)
+      info "The User has chosen to skip this step."
+      exit 0
+      break
+      ;;
+    *)
+      warn "Error! Entry must be 'y' or 'n'. Try again..."
+      echo
+      ;;
+  esac
+done
 
 
 #---- Checking PVE Host Prerequisites
@@ -118,36 +114,24 @@ fi
 #---- Configuring SSH keys
 section "Configuring SSH Authorized Keys."
 
-# Select SSH key access type
-TYPE01="${YELLOW}Existing SSH Keys${NC} - Append or add existing SSH Public Key to the host."
-TYPE02="${YELLOW}Create New SSH Keys${NC} - Generate a new set of SSH key pairs."
-PS3="Select the SSH key access type to proceed with (entering numeric) : "
-msg "Available options:"
-options=("$TYPE01" "$TYPE02")
-select menu in "${options[@]}"; do
-  case $menu in
-    "$TYPE01")
-      info "User has chosen: $(echo $menu | awk -F' - ' '{print $1}')"
-      SSH_TYPE=TYPE01
-      echo
-      break
-      ;;
-    "$TYPE02")
-      info "User has chosen: $(echo $menu | awk -F' - ' '{print $1}')"
-      SSH_TYPE=TYPE02
-      echo
-      break
-      ;;
-    *) warn "Invalid entry. Try again.." >&2
-  esac
-done
+msg "Select which method the User wants to add PVE SSH keys - add existing or generate new SSH key pairs..."
+OPTIONS_VALUES_INPUT=( "TYPE01" "TYPE02" )
+OPTIONS_LABELS_INPUT=( "Existing SSH Keys - Append or add existing SSH Public Key to the host" "Create New SSH Keys - Generate a new set of SSH key pairs" )
+makeselect_input2
+singleselect SELECTED "$OPTIONS_STRING"
+if [ ${RESULTS} == TYPE01 ]; then
+  SSH_TYPE=TYPE01
+elif [ ${RESULTS} == TYPE02 ]; then
+  SSH_TYPE=TYPE02
+fi
 
 # Copy and Paste your existing key into the terminal window
-if [ $SSH_TYPE = "TYPE01" ]; then
+if [ ${SSH_TYPE} = "TYPE01" ]; then
   section "Append or Add a existing SSH Public Key."
-  msg "User has chosen add a existing SSH Public Key to the PVE host. The User must copy the contents the SSH Public Key file to be added into the Users computer clipboard.
+  msg "The User has chosen add a existing SSH Public Key to the PVE host. This method requires the User to strictly follow the next sequence of steps. First the User must copy the contents their ${UNDERLINE}SSH Public Key${NC} file to be added into the Users computer clipboard.
+
     --  COPY A SSH PUBLIC KEY FILE
-          1. Open the SSH Public Key file in a text editor.
+          1. Open the SSH Public Key file in a text editor ( such as Notepad++ ).
           2. Highlight the key contents ( Ctrl + A ).
           3. Copy the highlighted contents to the Users computer clipboard ( Ctrl + C ).
     --  PASTE THE SSH PUBLIC KEY FILE
@@ -164,6 +148,7 @@ if [ $SSH_TYPE = "TYPE01" ]; then
         [Yy]*)
           msg "Try again..."
           echo
+          break
           ;;
         [Nn]*)
           info "User has chosen to skip this step. Exiting script."
@@ -190,7 +175,7 @@ if [ $SSH_TYPE = "TYPE01" ]; then
 fi
   
 # Generate a new set of SSH RSA Key pairs
-if [ $SSH_TYPE = "TYPE02" ]; then
+if [ ${SSH_TYPE} = "TYPE02" ]; then
   section "Generate SSH Key pair files."
   echo
   if [[ $(df -h | awk 'NR>1 { print $1, "mounted on", $NF }' | grep "/mnt/pve/.*backup") ]]; then
@@ -250,7 +235,7 @@ if [ $SSH_TYPE = "TYPE02" ]; then
   msg "Adding SSH Public Key to PVE host..."
   cat id_${PVE_HOSTNAME,,}_ed25519.pub >> /root/.ssh/authorized_keys
   msg "Creating backup ${WHITE}${SSH_BACKUP_FILENAME}${NC} file of SSH key pairs{..."
-  tar czf ${SS}H_BACKUP_FILENAME} id_${PVE_HOSTNAME,,}_ed25519 id_${PVE_HOSTNAME,,}_ed25519.pub id_${PVE_HOSTNAME,,}_ed25519.ppk
+  tar czf ${SSH_BACKUP_FILENAME} id_${PVE_HOSTNAME,,}_ed25519 id_${PVE_HOSTNAME,,}_ed25519.pub id_${PVE_HOSTNAME,,}_ed25519.ppk
   mkdir -p ${SSH_BACKUP_LOCATION} >/dev/null
   cp ${SSH_BACKUP_FILENAME} ${SSH_BACKUP_LOCATION}
 
@@ -277,30 +262,18 @@ fi
 section "Proxmox SSHD security modifications"
 
 msg "Minimizing vulnerabilities in the Secure Shell (SSH) protocol is key to ensuring the security of the PVE OS environment. The System Administrator can select from two preset measures to make PVE host '${HOSTNAME^}' more secure."
+echo
 
 # Select SSHD Security modifications
-TYPE01="${YELLOW}SSH Keys Only${NC} - Authentication by SSH key-pairs only."
-TYPE02="${YELLOW}SSH Keys & Passwords${NC} - Authentication by passwords & SSH key-pairs (Recommended)."
-PS3="Select the SSH key security you want for your PVE host (entering numeric) : "
-msg "Available options:"
-options=("$TYPE01" "$TYPE02")
-select menu in "${options[@]}"; do
-  case $menu in
-    "$TYPE01")
-      info "You have chosen preset: $(echo $menu | awk -F' - ' '{print $1}')"
-      SSH_SEC=TYPE01
-      echo
-      break
-      ;;
-    "$TYPE02")
-      info "You have chosen preset: $(echo $menu | awk -F' - ' '{print $1}')"
-      SSH_SEC=TYPE02
-      echo
-      break
-      ;;
-    *) warn "Invalid entry. Try again.." >&2
-  esac
-done
+OPTIONS_VALUES_INPUT=( "TYPE01" "TYPE02" )
+OPTIONS_LABELS_INPUT=( "SSH Keys Only - Authentication by SSH key-pairs only" "SSH Keys & Passwords - Authentication by passwords & SSH key-pairs (Recommended)" )
+makeselect_input2
+singleselect SELECTED "$OPTIONS_STRING"
+if [ ${RESULTS} == TYPE01 ]; then
+   SSH_SEC=TYPE01
+elif [ ${RESULTS} == TYPE02 ]; then
+  SSH_SEC=TYPE02
+fi
 
 if [ $SSH_SEC = TYPE01 ]; then
   # SSH key only, permitted root login & prohibit password authentication
@@ -318,23 +291,4 @@ elif [ $SSH_SEC = TYPE02 ]; then
   info "SSH security modifications are:\n         PermitRootLogin = ${YELLOW}yes${NC}\n         PasswordAuthentication = ${YELLOW}yes${NC}\n         PubkeyAuthentication = ${YELLOW}yes${NC}\n         PermitEmptyPasswords = ${YELLOW}no${NC}"
 fi
 
-
-#---- Finish
-section "PVE SSH Key Completion Status"
-
-msg "${WHITE}Success.${NC}"
-sleep 3
-
-# Cleanup
-if [ -z ${PARENT_EXEC_PVE_SETUP_SSHKEY+x} ]; then
-  msg "Restarting PVE host SSH daemon..."
-  nohup service sshd restart >/dev/null 2>&1
-  if [ "$(systemctl is-active --quiet sshd; echo $?) -eq 0" ]; then
-    info "SSHD status: ${GREEN}active (running).${NC}"
-    echo
-  elif [ "$(systemctl is-active --quiet sshd; echo $?) -eq 3" ]; then
-    info "SSHD status: ${RED}inactive (dead).${NC}. Your intervention is required."
-    echo
-  fi
-  trap cleanup
-fi
+#---- Finish Line ------------------------------------------------------------------

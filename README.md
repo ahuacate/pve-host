@@ -1,27 +1,12 @@
 <H1>PVE Host Setup</H1>
 
-This is a guide for configuring PVE host hardware. We have made a 'Easy Script' to automate the installation of software.
+This guide is for configuring PVE host hardware.
 
-Each Easy Script is optioned depending on your hardware specifications. Easy Script will run on both primary and secondary (cluster) PVE hosts.
+Our PVE Host Manager 'Easy Script' will automate the tasks for both primary and secondary (cluster) PVE hosts.
 
-The first step is to prepare your LAN network and check it meets our prerequisite list before running a Easy Script. The Easy Script will configure your storage, ZFS cache, networking and make system changes to your hardware. After running our Easy Script you should be ready to install any of our custom PVE containers (CTs). Its important you first read and follow the prerequisite guide.
-
-Easy Script will prompt the installer with options:
-
-**Options for Primary PVE Hosts only** - Your Main PVE Host (PVE-01)
-- Configure PVE host networking ready for installing pfSense
-  - requires a minimum of 3x Intel Ethernet NICs ( Intel NICs are preferred)
-- Configure PVE host networking (no pfSense)
-- Add PVE storage by creating a CIFS backend storage pool
-- Add PVE storage by creating a NFS backend storage pool
-- Create installer SSH key pairs for connecting to your PVE hosts root account via SSH
-
-**Options for Primary & Secondary PVE Hosts**
-- Configure PVE Postfix email service so you can receive email alerts
-- Install Fail2Ban as a intrusion prevention software to protects your PVE host from brute-force attacks
+If the User wants a full turnkey out of the box solution then prepare your LAN network and check it meets our prerequisite list of requirements. Its not mandatory but makes integration with the Ahuacate suite of VM's and CT's so much easier. Its important you first read this guide.
 
 **Prerequisites**
-
 Network prerequisites are:
 - [x] Layer 2/3 Network Switches
 - [x] Network Gateway is `XXX.XXX.XXX.5` ( *default is 192.168.1.5* )
@@ -29,78 +14,54 @@ Network prerequisites are:
 - [x] Internet access for the PVE host
 
 - [x] File server or NAS (i.e NAS-01) . Our default NAS IPv4 address is `XXX.XXX.XXX.10` ( *default is 192.168.1.10* )
-- [x] File server or NAS is configured with network shares, either CIFS or NFS, as per these [instructions](https://github.com/ahuacate/synobuild) and guides.
+- [x] File server or NAS is configured with network shares, either CIFS or NFS, as per these guides:
+  - Our Breed of NAS [build guide](https://github.com/ahuacate/pve-nas)
+  - OEM Branded NAS [build guide](https://github.com/ahuacate/nas-oem-setup)
+
+Note: If the User does not have NAS go create one using our PVE NAS solution [here](https://github.com/ahuacate/pve-nas). With a running NAS the User can create the required PVE host storage mounts.
 
 Other prerequisites (information the installer should have readily available before starting):
 
-- [ ] NAS CIFS user account credentials as per these [instructions.](https://github.com/ahuacate/synobuild) (Only if your adding PVE storage using NAS CIFS storage mounts)
-
+- [ ] SMB/NAS CIFS user account credentials as per these (Only if your adding PVE storage using NAS SMB/CIFS storage mounts)
 - [ ] Optional PVE Postfix
   - Email account credentials
-  - MailGun credentials
+  - MailGun account credentials
 
-<h4>List of Easy Scripts</h4>
+<h4>PVE Host Manager Easy Script</h4>
 
-Our single Easy Script can be used on both primary and secondary PVE hosts. Your user input is required. The script will create, edit and/or change system files on your PVE host. When an optional default setting is provided you can accept our default (recommended) by pressing ENTER on your keyboard. Or overwrite our default value by typing in your own value and then pressing ENTER to accept and to continue to the next step.
+Our single PVE Host Manager Easy Script can be used on both primary and secondary PVE hosts. Your user input is required. The script will create, edit and/or change system files on your PVE host. When an optional default setting is provided you can accept our default (recommended) by pressing ENTER on your keyboard. Or overwrite our default value by typing in your own value and then pressing ENTER to accept and to continue to the next step.
 
-After executing the Easy Script in your PVE host SSH terminal you will asked or prompted for input about:
+After executing the PVE Host Manager Easy Script in your PVE host SSH terminal you are prompted with a menu selection:
 
-- Verify PVE enterprise subscription status - A patch will be applied if you do not have a valid PVE subscription
-- Fully update your PVE host OS
-- Install prerequisite software - nbtscan, ifupdown2
-- Update PVE turnkey appliance list
-- Increase the PVE inotify limits
-- Perform PVE host UID/GID mapping for unprivileged CTs
-- Select PVE host type - Primary or Secondary
-- Configure your PVE host network interface card (NIC) 
-- Optional - Create NFS and/or CIFS backend storage mounts for your PVE hosts (Recommended - Must be done at some stage)
-- Optional - Install and configure Postfix SMTP email server and alerts (Recommended - requires a valid email & Mailgun credentials)
-- Optional - Install and configure SSH Authorized Keys (Recommended)
-- Optional - Install and configure Fail2Ban (Recommended)
+1. New PVE Host Builder - fully configure a new Proxmox host
+    - Verify PVE enterprise subscription status - A patch will be applied if you do not have a valid PVE subscription
+    - Update your PVE host OS
+    - Install prerequisite software - nbtscan, ifupdown2
+    - Update PVE turnkey appliance list
+    - Increase the PVE inotify limits
+    - Perform PVE host UID/GID mapping for unprivileged CTs
+    - Configure PVE host network interface card (NIC) 
+    - Create NFS and/or SMB/CIFS backend storage mounts for your PVE hosts (Recommended - Must be done at some stage)
+    - Install and configure Postfix SMTP email server and alerts (Recommended - requires a valid email & Mailgun credentials)
+    - Install and configure SSH Authorized Keys (Recommended)
+    - Install and configure Fail2Ban (Recommended)
+2. NFS Storage - add NFS PVE storage mounts
+3. SMB/CIFS Storage - add SMB/CIFS storage mounts
+4. Install Fail2Ban
+5. Install SSMTP Email Server
+6. Install a SSH Key -  add or create your own private SSH access key
+7. PVE CT Updater - install a automatic PVE CT updater
+8. None. Exit this installer
 
-The available options are different between primary and secondary hosts. Its best to perform all the recommended tasks. For example, by setting up the default Postfix SMTP server you will receive email copies of not only PVE alerts but also copies of newly created SSH keys pairs for your convenience.
+The available options vary between primary and secondary hosts. Its best to run task No.1 n all newly installed hardware and perform the recommended tasks. For example, by setting up the default Postfix SMTP server you will receive email copies of not only PVE alerts but also copies of newly created SSH keys pairs for your convenience.
 
-Easy Scripts are based on bash scripting. Simply `Cut & Paste` our Easy Script command into your terminal window, press `Enter` and follow the prompts and terminal instructions. But PLEASE first read our guide so you fully understand each scripts prerequisites and your input requirements.
+Easy Scripts are based on bash scripting. Simply `Cut & Paste` our Easy Script command into your terminal window, press `Enter` and follow the prompts and terminal instructions. But PLEASE first read our guide so you fully understand the input requirements.
 
-**Installation** (Recommended)
-This Easy Script is for primary and secondary PVE hosts. It gives the installer options to run our option add-ons to full configure your PVE hosts.
+**Installation**
 
 ```bash
 bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/pve_host_setup_installer.sh)"
 ```
-**Add-on** (optional)
-Optional Add-on Easy Scripts can be run anytime. They are for adding new PVE NAS storage mounts, installing Postfix email alerts and other services.
-
-Add-on - Add PVE NFS Storage Mounts
-
-```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_add_nfs_mounts.sh"
-```
-
-Add-on - Add PVE CIFS Storage Mounts
-
-```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_add_cifs_mounts.sh"
-```
-
-Add-on - Install and configure Postfix and email alerts
-
-```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_postfix.sh"
-```
-
-Add-on - Configuring SSH Authorized Keys
-
-```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_sshkey.sh"
-```
-
-Add-on - Install and configure Fail2ban
-
-```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_fail2ban.sh"
-```
-
 <hr>
 
 <h4>Table of Contents</h4>
@@ -127,10 +88,10 @@ bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup
         - [3.3.3. Setup network switch ports - pfSense](#333-setup-network-switch-ports---pfsense)
         - [3.3.4. Setup network WiFi SSiDs for the VPN service - pfSense](#334-setup-network-wifi-ssids-for-the-vpn-service---pfsense)
         - [3.3.5. Edit your UniFi network firewall - pfSense](#335-edit-your-unifi-network-firewall---pfsense)
-- [4. Easy Script](#4-easy-script)
+- [4. PVE Host Manager Easy Script Installer](#4-pve-host-manager-easy-script-installer)
     - [4.1. Prerequisite Credentials and Input Requirements](#41-prerequisite-credentials-and-input-requirements)
         - [4.1.1. SMTP Server Credentials](#411-smtp-server-credentials)
-    - [4.2. Run our Easy Script](#42-run-our-easy-script)
+    - [4.2. Run our PVE Host Manager Easy Script](#42-run-our-pve-host-manager-easy-script)
 - [5. Other PVE Host Stuff](#5-other-pve-host-stuff)
     - [5.1. Create a PVE Cluster](#51-create-a-pve-cluster)
         - [5.1.1. Create a Cluster](#511-create-a-cluster)
@@ -146,13 +107,13 @@ bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup
 
 # 1. Prepare your Hardware
 
-PVE hosts can be any x86 hardware with a few conditions. Best use Intel NIC devices (clones seem to be okay too). And only use enterprise grade SSD drives when creating ZFS Cache builds.
+PVE hosts can be any x86 hardware with a few conditions. The hardware should have Intel NIC devices (clones seem to be okay too). And only use enterprise grade SSD drives when creating ZFS Cache disks.
 
-In this guide you have the option to configure a PVE host which also serves as a backend ZFS file server with optional SSD cache. PVE has inbuilt ZFS to create Raid-Z storage tanks featuring as many disks as you like. You can read about our containerized NAS solution [here](https://github.com/ahuacate/pve-zfs-nas) which uses a PVE Ubuntu CT as the frontend.
+In this guide you have the option to configure a PVE host which also serves as a backend ZFS file server with optional SSD cache. PVE has inbuilt ZFS to create Raid-Z storage tanks featuring as many disks as you like. You can read about our containerized NAS solutions [here](https://github.com/ahuacate/pve-nas) which uses a PVE Ubuntu CT as the frontend.
 
-We also have a primary PVE host build option, for hardware with 3x or more Intel ethernet NICs, for running pfSense. With pfSense you can install OpenVPN Gateways, HAProxy servers and more using multiple NICs and VLANs. Our pfSense setup requires L2/L3 switches and VLANs.
+When configuring a PVE host hardware with 3x or more Intel ethernet NICs the User has the option to ready the PVE host networking for a pfSense VM. With pfSense you can install OpenVPN Gateways, HAProxy servers and more using multiple NICs and VLANs. Our pfSense setup requires L2/L3 switches and VLANs and host hardware installed with 3x or more Intel ethernet NICs.
 
-Secondary PVE hosts need only a 1x ethernet NIC. A minimum of two secondary PVE hosts is needed to form a quorum in the event a PVE host fails. Note: The downside is when your primary PVE host goes offline then your PfSense services (i.e. OpenVPN, HAProxy) are also offline.
+Secondary PVE hosts in general need only a 1x ethernet NIC. A minimum of two secondary PVE hosts is needed to form a quorum in the event a PVE host fails. Note: The downside is when your primary PVE host goes offline then your PfSense services (i.e. OpenVPN, HAProxy) are also offline.
 
 Your PVE host hardware specifications are determined by your mainboard type.
 
@@ -377,7 +338,7 @@ This unallocated needs to be partitioned as follows:
 First identify which drive devices are used for your Proxmox VE OS. If you chose ZFS Raid1 during the Proxmox install then you have two drives to partition. To identify the drives to partition first SSH into `pve-01`(ssh root@192.168.1.101) or use the Proxmox web interface CLI shell `pve-01` > `>_ Shell` and type the following into the CLI terminal window:
 
 ```bash
-fdisk -l 2>/dev/null | grep -E 'BIOS boot|EFI System'| awk '{ print $1 }' | sort | sed 's/[0-9]*//g' | awk '!seen[$0]++'
+fdisk -l 2>/dev/null | grep -E 'BIOS boot|EFI System' | awk '{ print $1 }' | sort | sed 's/[0-9]*//g' | awk '!seen[$0]++'
 ```
 
 ```bash
@@ -386,7 +347,7 @@ fdisk -l 2>/dev/null | grep -E 'BIOS boot|EFI System'| awk '{ print $1 }' | sort
 /dev/sdb
 ```
 
-The above means you must partition devices /dev/sda and /dev/sdb. If only one device shows that's okay as it means you installed PVE OS on one drive only (i.e. ZFS Raid0).
+The above means you must partition devices /dev/sda and /dev/sdb. If only one device shows that's okay as it means you installed PVE OS on one drive only (i.e. ZFS Raid0). The device names for NVMe are /dev/nvme0n1, /dev/nvme1n1 and so on.
 
 To create the partitions we again need a SSH terminal. SSH into `pve-01`(ssh root@192.168.1.101) or use the Proxmox web interface CLI shell `pve-01` > `>_ Shell` and type the following into the CLI terminal window. Repeat steps 1 to 8 for the above device ID(s) (i.e `cfdisk /dev/sda` and `cfdisk /dev/sdb`).
 
@@ -479,7 +440,7 @@ Your options are:
 
 **NAS Appliance** - A NAS of any brand or type, Synology, QNap, FreeNAS, Windows or Linux server, available on your network preferably with IPv4 address `XXX.XXX.XXX.10` ( *default is 192.168.1.10* ). The NAS must be installed with Samba and NFSv4.1 services. This guide details what you must to do to setup your NAS NAS File sharing and permissions.
 
-**PVE NAS** (ZFS) - A PVE ZFS RaidZ storage pool (backend) can be hosted on PVE-01. Management of the backend storage is by a PVE Ubuntu CT (labelled NAS-01) frontend also hosted on PVE-01. NAS-01 CT is installed with NFSv4.1 and Samba services. Our detailed guide includes an Easy Scripts to setup a [PVE NAS](https://github.com/ahuacate/pve-zfs-nas/blob/master/README.md).
+**PVE NAS** (ZFS) - A PVE ZFS RaidZ storage pool (backend) can be hosted on PVE-01. Management of the backend storage is by a PVE Ubuntu CT (labelled NAS-01) frontend also hosted on PVE-01. NAS-01 CT is installed with NFSv4.1 and SMB services. Our detailed guide includes an Easy Scripts to setup a [PVE NAS](https://github.com/ahuacate/pve-nas).
 
 
 # 3. Network Switch Setup - VLANs, 802.3ad, PfSense, OpenVPN Gateway
@@ -745,30 +706,39 @@ And click `Apply Changes`.
 As you've probably concluded you must add any new HAProxy backend server IPv4 address(s) to the UniFi Pre-Authorization Access list for HAProxy frontend to have access to these servers.
 
 
-# 4. Easy Script
+# 4. PVE Host Manager Easy Script Installer
 
-Our single Easy Script can be used on both primary and secondary PVE hosts. Your user input is required. The script will create, edit and/or change system files on your PVE host. When an optional default setting is provided you can accept our default (recommended) by pressing ENTER on your keyboard. Or overwrite our default value by typing in your own value and then pressing ENTER to accept and to continue to the next step.
+Our single PVE Host Manager Easy Script can be used on both primary and secondary PVE hosts. Your user input is required. The script will create, edit and/or change system files on your PVE host. When an optional default setting is provided you can accept our default (recommended) by pressing ENTER on your keyboard. Or overwrite our default value by typing in your own value and then pressing ENTER to accept and to continue to the next step.
 
-After executing the Easy Script in your PVE host SSH terminal you will asked or prompted for input about:
+After executing the PVE Host Manager Easy Script in your PVE host SSH terminal you are prompted with a menu selection:
 
-- Verify PVE enterprise subscription status - A patch will be applied if you do not have a valid PVE subscription
-- Fully update your PVE host OS
-- Install prerequisite software - nbtscan, ifupdown2
-- Update PVE turnkey appliance list
-- Increase the PVE inotify limits
-- Perform PVE host UID/GID mapping for unprivileged CTs
-- Select PVE host type - Primary or Secondary
-- Configure your PVE host network interface card (NIC) 
-- Optional - Create NFS and/or CIFS backend storage mounts for your PVE hosts (Recommended - Must be done at some stage)
-- Optional - Install and configure Postfix SMTP email server and alerts (Recommended - requires a valid email & Mailgun credentials)
-- Optional - Install and configure SSH Authorized Keys (Recommended)
-- Optional - Install and configure Fail2Ban (Recommended)
+1. New PVE Host Builder - fully configure a new Proxmox host
+    - Verify PVE enterprise subscription status - A patch will be applied if you do not have a valid PVE subscription
+    - Update your PVE host OS
+    - Install prerequisite software - nbtscan, ifupdown2
+    - Update PVE turnkey appliance list
+    - Increase the PVE inotify limits
+    - Perform PVE host UID/GID mapping for unprivileged CTs
+    - Configure PVE host network interface card (NIC) 
+    - Create NFS and/or SMB/CIFS backend storage mounts for your PVE hosts (Recommended - Must be done at some stage)
+    - Install and configure Postfix SMTP email server and alerts (Recommended - requires a valid email & Mailgun credentials)
+    - Install and configure SSH Authorized Keys (Recommended)
+    - Install and configure Fail2Ban (Recommended)
+2. NFS Storage - add NFS PVE storage mounts
+3. SMB/CIFS Storage - add SMB/CIFS storage mounts
+4. Install Fail2Ban
+5. Install SSMTP Email Server
+6. Install a SSH Key -  add or create your own private SSH access key
+7. PVE CT Updater - install a automatic PVE CT updater
+8. None. Exit this installer
 
-The available options are different between primary and secondary hosts. Its best to perform all the recommended tasks. For example, by setting up the default Postfix SMTP server you will receive email copies of not only PVE alerts but also copies of newly created SSH keys pairs for your convenience.
+The available options vary between primary and secondary hosts. Its best to run task No.1 n all newly installed hardware and perform the recommended tasks. For example, by setting up the default Postfix SMTP server you will receive email copies of not only PVE alerts but also copies of newly created SSH keys pairs for your convenience.
+
+Easy Scripts are based on bash scripting. Simply `Cut & Paste` our Easy Script command into your terminal window, press `Enter` and follow the prompts and terminal instructions. But PLEASE first read our guide so you fully understand the input requirements.
 
 ## 4.1. Prerequisite Credentials and Input Requirements
 
-During the Easy Script installation you will be required to provide some inputs. You will have the option to use our default variables on most variable inputs. It's best to have details like your SMTP server account login credentials and other input information readily available prior to running our Easy Script.
+During the Easy Script installation you will be required to provide some inputs. You will have the option to use our default variables on most variable inputs. It's best to have your SMTP server account login credentials and other input information readily available prior to running our Easy Script.
 
 ### 4.1.1. SMTP Server Credentials
 
@@ -778,23 +748,23 @@ You will be asked for the credentials of a SMTP Server. You can use Gmail, Godad
 
 But we recommend you create a account at mailgun.com to relay your NAS system emails to your designated administrator. With mailgun you are not potentially exposing your private email server credentials held within a text file on your PVE host. This is a added layer of security.
 
-## 4.2. Run our Easy Script
+## 4.2. Run our PVE Host Manager Easy Script
 
-To execute a Easy Script SSH into your PVE host  (i.e. `ssh root@192.168.1.101`) or use the Proxmox web interface CLI shell `pve-0x` > `>_ Shell` and cut & paste the following into the CLI terminal window and press ENTER:
+To execute SSH into your PVE host ( i.e. `ssh root@192.168.1.101` ) or use the Proxmox web interface CLI shell `pve-0x` > `>_ Shell` and cut & paste the following into the CLI terminal window and press ENTER:
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/proxmox-node/master/scripts/typhoon-01-sfp_4x_NIC-setup-01.sh)"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/pve_host_setup_installer.sh)"
 ```
 
 On completion you will see on your CLI terminal words **"Success"** and your PVE host login credentials.
 
-
+Note: We recommended you establish a SSH connection from a computer CLI terminal or with a application like Putty (a free SSH and telnet client for Windows) https://www.putty.org instead of using the Proxmox web interface CLI shell.
 
 # 5. Other PVE Host Stuff
 
 ## 5.1. Create a PVE Cluster
 
-Proxmox requires a  minimum of three PVE hosts on the same network to form a cluster - PVE-01, PVE-02 and PVE-03.
+Proxmox requires a minimum of three PVE hosts on the same network to form a cluster - PVE-01, PVE-02 and PVE-03.
 
 ### 5.1.1. Create a Cluster
 
