@@ -25,10 +25,6 @@ else
   exit 0
 fi
 
-# Set Package Installer Temp Folder
-cd /tmp
-
-
 #---- Static Variables -------------------------------------------------------------
 
 # Git server
@@ -43,6 +39,10 @@ GIT_BRANCH='master'
 GIT_COMMON='0'
 # Installer App script
 GIT_APP_SCRIPT='pve_host_setup.sh'
+
+# Set Package Installer Temp Folder
+REPO_TEMP='/tmp'
+cd ${REPO_TEMP}
 
 #---- Other Variables --------------------------------------------------------------
 
@@ -59,6 +59,18 @@ else
   # Download Github loader
   bash -c "$(wget -qLO - https://raw.githubusercontent.com/${GIT_USER}/common/master/bash/source/pve_repo_loader.sh)"
 fi
+
+#---- Package loader
+if [ -f /mnt/pve/nas-*[0-9]-git/${GIT_USER}/developer_settings.git ] && [ -f /mnt/pve/nas-*[0-9]-git/${GIT_USER}/common/bash/source/pve_repo_loader.sh ]; then
+  # Developer Options loader
+  source /mnt/pve/nas-*[0-9]-git/${GIT_USER}/common/bash/source/pve_repo_loader.sh
+else
+  # Download Github loader
+  wget -qL - https://raw.githubusercontent.com/${GIT_USER}/common/master/bash/source/pve_repo_loader.sh -O ${REPO_TEMP}/pve_repo_loader.sh
+  chmod +x ${REPO_TEMP}/pve_repo_loader.sh
+  source ${REPO_TEMP}/pve_repo_loader.sh
+fi
+
 
 #---- Body -------------------------------------------------------------------------
 
