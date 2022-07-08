@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ----------------------------------------------------------------------------------
-# Filename:     pve_host_setup_networking.sh
-# Description:  Setup PVE Host networking
+# Filename:     pve_host_setup_network.sh
+# Description:  Setup PVE Host network
 # ----------------------------------------------------------------------------------
 
 #---- Bash command to run script ---------------------------------------------------
@@ -9,25 +9,7 @@
 # bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_networking.sh)"
 
 #---- Source -----------------------------------------------------------------------
-
-DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-PVE_SOURCE="$DIR/../../common/pve/source"
-BASH_SOURCE="$DIR/../../common/bash/source"
-
 #---- Dependencies -----------------------------------------------------------------
-
-# Check for Internet connectivity
-if nc -zw1 google.com 443; then
-  echo
-else
-  echo "Checking for internet connectivity..."
-  echo -e "Internet connectivity status: \033[0;31mDown\033[0m\n\nCannot proceed without a internet connection.\nFix your PVE hosts internet connection and try again..."
-  echo
-  exit 0
-fi
-
-# Run Bash Header
-source $PVE_SOURCE/pvesource_bash_defaults.sh
 
 # Check IP
 ipvalid () {
@@ -45,7 +27,7 @@ ipvalid () {
 }
 
 # Check IP Validity of Octet
-function valid_ip() {
+function valid_ip () {
   local  ip=$1
   local  stat=1
   if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
@@ -77,7 +59,7 @@ fi
 #---- Static Variables -------------------------------------------------------------
 
 # Easy Script Section Header Body Text
-SECTION_HEAD='PVE Host Networking'
+SECTION_HEAD='PVE Host Network'
 
 #---- Other Variables --------------------------------------------------------------
 #---- Other Files ------------------------------------------------------------------
@@ -87,7 +69,7 @@ SECTION_HEAD='PVE Host Networking'
 #---- Configure PVE Host Networking
 section "Introduction"
 
-msg_box "PVE host '${HOSTNAME^^}' is installed with the following network NICs:
+msg_box "PVE host '${HOSTNAME^^}' is installed with the following network NICs:\n
 $(# Show Available NICs
 if [[ $(ip -o link show | awk -F': ' '$0 ~ "eno[0-9]"{print $2}') ]]; then
   echo
@@ -112,6 +94,7 @@ else
   echo "  --  None." 
 fi
 )"
+echo
 
 while true; do
   read -p "Setup or modify the PVE host networking [y/n]?: "  -n 1 -r YN
@@ -124,8 +107,7 @@ while true; do
     [Nn]*)
       info "You have chosen to skip this step."
       echo
-      exit 0
-      break
+      return
       ;;
     *)
       warn "Error! Entry must be 'y' or 'n'. Try again..."
@@ -149,7 +131,6 @@ while IFS='|' read -r VAR01; do
   NIC_SRC_LIST+=( "$(echo "${VAR01}|${NIC_PORT_CNT}|${NIC_CAPACITY}|${NIC_VENDOR_ID}|${NIC_PRODUCT_ID}")" )
   # echo "${VAR01}|${NIC_PORT_CNT}|${NIC_CAPACITY}|${NIC_VENDOR_ID}|${NIC_PRODUCT_ID}"
 done < <(ip -o link show | awk -F': ' '$0 ~ "enp[0-9]s[0-9]|eno[0-9]"{print $2}')
-# printf '%s\n' "${NIC_SRC_LIST[@]}"
 
 
 # Select available PVE host Ethernet NICs to configure
@@ -163,6 +144,7 @@ elif [ $((${ENO_CNT}+$ENP_CNT)) -ge 4 ]; then
   echo "With 4x or more NICs the User has the option to create twin VLAN pfSense OpenVPN gateways. This option is only available if Layer 2/3 network switches are installed."
 fi
 ) Select which ethernet NICs and/or PCI Cards to enable. Note: Proxmox supports Intel brand NICs. Other brands may be less reliable."
+echo
 OPTIONS_VALUES_INPUT=$(printf '%s\n' "${NIC_SRC_LIST[@]}")
 OPTIONS_LABELS_INPUT=$(printf '%s\n' "${NIC_SRC_LIST[@]}" | awk -F'|' '{ print $1, "---", $4",", $5, "("$3"GbE)" }')
 makeselect_input1 "$OPTIONS_VALUES_INPUT" "$OPTIONS_LABELS_INPUT"
@@ -415,157 +397,6 @@ if [ ${SET_PVE_HOST_IP} = 0 ]; then
       done
     fi
   done
-fi
-
-
-#---- Set PVE Hostname
-section "Modify PVE host 'hostname'"
-
-# Edit hostname check
-if [[ $(pct list) ]] || [[ $(qm list) ]] && [[ $(pvecm nodes 2>/dev/null | grep $HOSTNAME) ]]; then
-  warn "PVE host '$HOSTNAME' is reporting to be hosting $(qm list | awk 'NR>1 { print $1 }' | wc -l)x virtual machines (VMs)\nand $(pct list | awk 'NR>1 { print $1 }' | wc -l)x LXC containers (CTs).\n\nIf you want to proceed to configure or make system changes to this PVE host\n'$HOSTNAME' you must first take the following steps:\n      FOR SINGLE OR PRIMARY NODES - REMOVE ALL CONTAINERS\n      --  Stop all VMs and CTs.\n      --  Create a backup archive of all VMs and CTs.\n      --  REMOVE all VMs and CTs.\nA backup archive can be restored through the Proxmox VE web GUI or through\nthe PVE CLI tools.\n\nPVE host '$HOSTNAME' is also reporting as a member of a PVE cluster.\nTo proceed you must first remove this node ( '$HOSTNAME' ) from the PVE cluster.\n      REMOVE NODE FROM CLUSTER\n      --  Migrate all VMs and CTs to another active node.\n      --  Remove '$HOSTNAME' from the PVE cluster."
-  echo
-  msg "Complete the above tasks and try running this script again."
-  info "PVE host IP 'hostname' is set: ${WHITE}$(hostname)${NC} ( unchanged )"
-  echo
-  SET_PVE_HOST_HOSTNAME_CHECK=1
-elif [[ $(pct list) ]] || [[ $(qm list) ]] && [[ ! $(pvecm nodes 2>/dev/null | grep $HOSTNAME) ]]; then
-  warn "PVE host '$HOSTNAME' is reporting to be hosting $(qm list | awk 'NR>1 { print $1 }' | wc -l)x virtual machines (VMs)\nand $(pct list | awk 'NR>1 { print $1 }' | wc -l)x LXC containers (CTs).\n\nIf you want to proceed to configure or make system changes to this PVE host\n'$HOSTNAME' you must first take the following steps:\n      FOR SINGLE OR PRIMARY NODES - REMOVE ALL CONTAINERS\n      --  Stop all VMs and CTs.\n      --  Create a backup archive of all VMs and CTs.\n      --  REMOVE all VMs and CTs.\nA backup archive can be restored through the Proxmox VE web GUI or through\nthe PVE CLI tools."
-  echo
-  msg "Complete the above tasks and try running this script again."
-  info "PVE host IP 'hostname' is set: ${WHITE}$(hostname)${NC} ( unchanged )"
-  echo
-  SET_PVE_HOST_HOSTNAME_CHECK=1
-elif [[ ! $(pct list) ]] || [[ ! $(qm list) ]] && [[ $(pvecm nodes 2>/dev/null | grep $HOSTNAME) ]]; then
-  warn "PVE host '$HOSTNAME' is reporting as a member of a PVE cluster.\nTo proceed you must first remove this node ( '$HOSTNAME' ) from the PVE cluster.\n      REMOVE NODE FROM CLUSTER\n      --  Migrate all VMs and CTs to another active node.\n      --  Remove '$HOSTNAME' from the PVE cluster."
-  echo
-  msg "Complete the above tasks and try running this script again."
-  info "PVE host IP 'hostname' is set: ${WHITE}$(hostname)${NC} ( unchanged )"
-  echo
-  SET_PVE_HOST_HOSTNAME_CHECK=1
-else
-  SET_PVE_HOST_HOSTNAME_CHECK=0
-fi
-
-if [ ${SET_PVE_HOST_HOSTNAME_CHECK} == 0 ]; then
-  msg "The PVE host current 'hostname' is set: ${WHITE}$HOSTNAME${NC}."
-  read -p "Do you want to change the PVE host hostname [y/n]?: " -n 1 -r
-  echo
-  while true; do
-    read -p "Do you want to change the PVE host hostname [y/n]?: " -n 1 -r YN
-    echo
-    case $YN in
-      [Yy]*)
-        SET_PVE_HOST_HOSTNAME=0
-        echo
-        break
-        ;;
-      [Nn]*)
-        SET_PVE_HOST_HOSTNAME=1
-        info "PVE host IP 'hostname' is set: ${WHITE}$(hostname)${NC} ( unchanged )"
-        echo
-        break
-        ;;
-      *)
-        warn "Error! Entry must be 'y' or 'n'. Try again..."
-        echo
-        ;;
-    esac
-  done
-fi
-
-
-# Set PVE host 'hostname'
-if [ ${SET_PVE_HOST_HOSTNAME} = 0 ]; then
-  # Hostname suggestion only
-  if [ ${PVE_TYPE} = 1 ] && [[ $HOSTNAME =~ ^[A-Za-z]+\-"01"$ ]];then
-    PVE_HOSTNAME_VAR01=$HOSTNAME
-  elif [ ${PVE_TYPE} = 1 ] && ! [[ $HOSTNAME =~ ^[A-Za-z]+\-"01"$ ]];then
-    PVE_HOSTNAME_VAR01=pve-01
-  elif [ ${PVE_TYPE} = 2 ] && [[ $HOSTNAME =~ ^[A-Za-z]+\-0[2-9]{1}$ ]];then
-    PVE_HOSTNAME_VAR01=$HOSTNAME
-  elif [ ${PVE_TYPE} = 2 ] && ! [[ $HOSTNAME =~ ^[A-Za-z]+\-0[2-9]{1}$ ]];then
-    PVE_HOSTNAME_VAR01=pve-02
-  fi
-  while true; do
-    read -p "Enter a new PVE host 'hostname': " -e -i ${PVE_HOSTNAME_VAR01} PVE_HOSTNAME
-    PVE_HOSTNAME=${PVE_HOSTNAME,,}
-    if [ ${PVE_TYPE} = 1 ] && ! [[ "${PVE_HOSTNAME}" =~ ^[A-Za-z]+\-[0-9]{2}$ ]]; then
-      warn "There are problems with your input:\n1. The hostname denotation is missing (i.e must be hostname-01).\n   Try again..."
-      echo
-    elif [ ${PVE_TYPE} = 1 ] && [ ${PVE_HOSTNAME} == "pve-01" ]; then
-      info "PVE hostname is set: ${YELLOW}${PVE_HOSTNAME}${NC}"
-      HOSTNAME_FIX=0
-      echo
-      break
-    elif [ ${PVE_TYPE} = 1 ] && [ $(echo "${PVE_HOSTNAME}" | cut -d'-' -f 1 ) != 'pve' ] && [ $(echo "${PVE_HOSTNAME}" | rev | cut -d'-' -f 1 | rev) -eq 01 ]; then
-      msg "PVE hostname ${WHITE}${PVE_HOSTNAME}${NC} is:\n1. Correctly denoted for primary PVE hosts (i.e -01).\n2. The name ${WHITE}${PVE_HOSTNAME}${NC} is non-standard but acceptable (i.e pve-01)."
-      while true; do
-        read -p "Accept your non-standard primary PVE hostname ${WHITE}"${PVE_HOSTNAME}"${NC} [y/n]?: " -n 1 -r YN
-        echo
-        case $YN in
-          [Yy]*)
-            info "PVE hostname is set: ${YELLOW}${PVE_HOSTNAME}${NC}"
-            HOSTNAME_FIX=0
-            echo
-            break 2
-            ;;
-          [Nn]*)
-            msg "Try again..."
-            echo
-            break
-            ;;
-          *)
-            warn "Error! Entry must be 'y' or 'n'. Try again..."
-            echo
-            ;;
-        esac
-      done
-    elif [ ${PVE_TYPE} = 1 ] && [ $(echo "${PVE_HOSTNAME}" | rev | cut -d'-' -f 1 | rev) -ne 01 ]; then
-      warn "There are problems with your input:\n1. Primary PVE hosts must be denoted with 01.\n   Try again..."
-      echo
-    elif [ ${PVE_TYPE} = 2 ] && ! [[ "${PVE_HOSTNAME}" =~ ^[A-Za-z]+\-0[2-9]{1}$ ]]; then
-      warn "There are problems with your input:\n1. The hostname denotation is missing (i.e must be hostname-02/03/04 etc).\n   Try again..."
-      echo
-    elif [ ${PVE_TYPE} = 2 ] && [[ ${PVE_HOSTNAME} =~ "-01" ]]; then
-      warn "There are problems with your input:\n1. Secondary PVE hosts cannot be denoted with 01 (i.e ${PVE_HOSTNAME}).\n2. Secondary PVE hosts must be denoted from 02 to 09.\n   Try again..."
-      echo
-    elif [ ${PVE_TYPE} = 2 ] && [ $(echo "${PVE_HOSTNAME}" | cut -d'-' -f 1 ) == pve ] && [ $(echo "${PVE_HOSTNAME}" | rev | cut -d'-' -f 1 | rev) -ge 02 ] && [ $(echo "${PVE_HOSTNAME}" | rev | cut -d'-' -f 1 | rev) -le 09 ]; then
-      info "PVE hostname is set: ${YELLOW}${PVE_HOSTNAME}${NC}."
-      HOSTNAME_FIX=0
-      echo
-      break
-    elif [ ${PVE_TYPE} = 2 ] && [ $(echo "${PVE_HOSTNAME}" | cut -d'-' -f 1 ) != 'pve' ] && [ $(echo "${PVE_HOSTNAME}" | rev | cut -d'-' -f 1 | rev) -ge 02 ] && [ $(echo "${PVE_HOSTNAME}" | rev | cut -d'-' -f 1 | rev) -le 09 ]; then
-      msg "PVE hostname ${WHITE}${PVE_HOSTNAME}${NC} is:\n1. Correctly denoted for secondary PVE hosts (i.e -02,-03).\n2. The name ${WHITE}${PVE_HOSTNAME}${NC} is non-standard but acceptable (i.e pve-$(echo "${PVE_HOSTNAME}" | rev | cut -d'-' -f 1 | rev))."
-      while true; do
-        read -p "Accept your non-standard secondary PVE hostname ${WHITE}"${PVE_HOSTNAME}"${NC} [y/n]?: " -n 1 -r YN
-        echo
-        case $YN in
-          [Yy]*)
-            info "PVE hostname is set: ${YELLOW}${PVE_HOSTNAME}${NC}"
-            HOSTNAME_FIX=0
-            echo
-            break 2
-            ;;
-          [Nn]*)
-            msg "Try again..."
-            echo
-            break
-            ;;
-          *)
-            warn "Error! Entry must be 'y' or 'n'. Try again..."
-            echo
-            ;;
-        esac
-      done
-    elif [ ${PVE_TYPE} = 2 ] && [ $(echo "${PVE_HOSTNAME}" | rev | cut -d'-' -f 1 | rev) -le 01 ] && [ $(echo "${PVE_HOSTNAME}" | rev | cut -d'-' -f 1 | rev) -ge 10 ]; then
-      warn "There are problems with your input:\n1. Secondary PVE hosts must be denoted from 02 to 09.\n   Try again..."
-      echo
-    fi
-  done
-else
-  PVE_HOSTNAME=$HOSTNAME
-  info "PVE hostname is set: ${YELLOW}${PVE_HOSTNAME}${NC} (Unchanged)."
 fi
 
 
@@ -937,10 +768,16 @@ fi
 
 #---- Finish Line ------------------------------------------------------------------
 echo
+section "Completion Status."
 if [ -f /etc/network/interfaces.old ]; then
-msg_box "A backup copy of the previous network configuration is stored here: /etc/network/interfaces.old
+msg "Success. Task complete.
+A backup copy of the previous network configuration is stored here: /etc/network/interfaces.old
 In case after reboot the User has connection issues the User can restore the previous settings with the following CLI command:
 
     cat /etc/network/interfaces.old > /etc/network/interfaces.new
     systemctl restart networking"
+  echo
+else
+  msg "Success. Task complete."
+  echo
 fi

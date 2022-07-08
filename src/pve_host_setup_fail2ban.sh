@@ -5,30 +5,8 @@
 # ----------------------------------------------------------------------------------
 
 #---- Bash command to run script ---------------------------------------------------
-
-# bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_fail2ban.sh)"
-
 #---- Source -----------------------------------------------------------------------
-
-DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-PVE_SOURCE="$DIR/../../common/pve/source"
-BASH_SOURCE="$DIR/../../common/bash/source"
-
 #---- Dependencies -----------------------------------------------------------------
-
-# Check for Internet connectivity
-if nc -zw1 google.com 443; then
-  echo
-else
-  echo "Checking for internet connectivity..."
-  echo -e "Internet connectivity status: \033[0;31mDown\033[0m\n\nCannot proceed without a internet connection.\nFix your PVE hosts internet connection and try again..."
-  echo
-  exit 0
-fi
-
-# Run Bash Header
-source $PVE_SOURCE/pvesource_bash_defaults.sh
-
 #---- Static Variables -------------------------------------------------------------
 
 # Easy Script Section Header Body Text
@@ -82,8 +60,7 @@ while true; do
     [Nn]*)
       info "You have chosen to skip this step."
       echo
-      exit 0
-      break
+      return
       ;;
     *)
       warn "Error! Entry must be 'y' or 'n'. Try again..."
@@ -115,7 +92,7 @@ section "Configuring Fail2ban"
 # Checking Postfix SMTP Status
 msg "Checking PVE host SMTP email server status for sending Fail2ban alerts..."
 EMAIL_RECIPIENT=$(pveum user list | awk -F " │ " '$1 ~ /root@pam/' | awk -F " │ " '{ print $3 }')
-if [ ${SMTP_STATUS} = 0 ]; then
+if [ ${SMTP_STATUS} == '0' ]; then
   while true; do
     read -p "Enable Fail2ban email alerts [y/n]?: " -n 1 -r YN
     echo
@@ -138,7 +115,7 @@ if [ ${SMTP_STATUS} = 0 ]; then
         ;;
     esac
   done
-elif [ ${SMTP_STATUS} = 1 ]; then
+elif [ ${SMTP_STATUS} == '1' ]; then
   msg "We cannot determine if the PVE hosts Postfix email server works."
   while true; do
     read -p "Is the PVE host Postfix email server configured and working [y/n]?: " -n 1 -r YN
@@ -185,13 +162,13 @@ fi
 
 # Configuring Fail2Ban
 # Fail2Ban Default Access rulesets
-if [ ${F2B_EMAIL_ALERTS} = 0 ]; then
+if [ ${F2B_EMAIL_ALERTS} == '0' ]; then
   msg "Configuring Fail2Ban default rulesets..."
   F2B_DEFAULT_IPWHITELIST="127.0.0.1/8"
-  info "PVE hosts Fail2ban default ruleset is set:\n         Email alerts: ${YELLOW}Active${NC}\n         Alerts sent to: ${YELLOW}${EMAIL_RECIPIENT}${NC}\n         IP whitelist: ${YELLOW}$F2B_DEFAULT_IPWHITELIST${NC}"
-  echo -e "[DEFAULT]\ndestemail = ${EMAIL_RECIPIENT}\nsender = fail2ban@localhost\nsendername = Fail2ban\nmta = mail\naction = %(action_mwl)s\nignoreip = $F2B_DEFAULT_IPWHITELIST" > /etc/fail2ban/jail.local
+  info "PVE hosts Fail2ban default ruleset is set:\n         Email alerts: ${YELLOW}active${NC}\n         Alerts sent to: ${YELLOW}${EMAIL_RECIPIENT}${NC}\n         IP whitelist: ${YELLOW}${F2B_DEFAULT_IPWHITELIST}${NC}"
+  echo -e "[DEFAULT]\ndestemail = ${EMAIL_RECIPIENT}\nsender = fail2ban@localhost\nsendername = Fail2ban\nmta = mail\naction = %(action_mwl)s\nignoreip = ${F2B_DEFAULT_IPWHITELIST}" > /etc/fail2ban/jail.local
   echo
-elif [ ${F2B_EMAIL_ALERTS} = 1 ]; then
+elif [ ${F2B_EMAIL_ALERTS} == '1' ]; then
   msg "Configuring Fail2Ban default rulesets..."
   info "PVE hosts Fail2ban default ruleset is set:\n         IP whitelist: ${YELLOW}127.0.0.1/8${NC}"
   echo -e "[DEFAULT]\nignoreip = 127.0.0.1/8" > /etc/fail2ban/jail.local
@@ -199,7 +176,7 @@ elif [ ${F2B_EMAIL_ALERTS} = 1 ]; then
 fi
 
 # Fail2Ban PVE WebGui HTTP(s) Access rulesets
-msg "Configuring Fail2Ban PVE WebGui HTTP(s) access rulesets..."
+msg "Configuring Fail2Ban PVE WebGui HTTP(s) access ruleset..."
 F2B_HTTP_MAX_RETRY='3'
 F2B_HTTP_BANTIME='1' # Hours (Units)
 read -p "Confirm your PVE hosts WebGui HTTP(s) port number: " -e -i 8006 F2B_HTTP_PVE_PORT
@@ -229,3 +206,7 @@ elif [ "$(systemctl is-active --quiet fail2ban; echo $?) -eq 3" ]; then
 fi
 
 #---- Finish Line ------------------------------------------------------------------
+
+section "Completion Status."
+msg "Success. Task complete."
+echo

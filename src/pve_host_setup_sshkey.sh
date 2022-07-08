@@ -9,26 +9,7 @@
 #bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_sshkey.sh)"
 
 #---- Source -----------------------------------------------------------------------
-
-DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-PVE_SOURCE="$DIR/../../common/pve/source"
-BASH_SOURCE="$DIR/../../common/bash/source"
-
 #---- Dependencies -----------------------------------------------------------------
-
-# Check for Internet connectivity
-if nc -zw1 google.com 443; then
-  echo
-else
-  echo "Checking for internet connectivity..."
-  echo -e "Internet connectivity status: \033[0;31mDown\033[0m\n\nCannot proceed without a internet connection.\nFix your PVE hosts internet connection and try again..."
-  echo
-  exit 0
-fi
-
-# Run Bash Header
-source $PVE_SOURCE/pvesource_bash_defaults.sh
-
 #---- Static Variables -------------------------------------------------------------
 
 # Easy Script Section Header Body Text
@@ -53,7 +34,8 @@ fi
 #---- Introduction
 section "Introduction"
 
-msg_box "#### PLEASE READ CAREFULLY - CONFIGURING SSH AUTHORIZED KEYS ####\n
+msg_box "#### PLEASE READ CAREFULLY - CONFIGURING SSH AUTHORIZED KEYS ####
+
 PVE System Administrators should use SSH keys to access PVE root accounts over SSH. PVE requires all SSH keys to be in the OpenSSH format. Your PVE host SSH key choices are:
 
 1. Append or add an existing SSH Public Key to PVE hosts authorized keys file.
@@ -292,3 +274,7 @@ elif [ $SSH_SEC = TYPE02 ]; then
 fi
 
 #---- Finish Line ------------------------------------------------------------------
+
+section "Completion Status."
+msg "Success. Task complete."
+echo

@@ -9,25 +9,7 @@
 # bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_postfix.sh)"
 
 #---- Source -----------------------------------------------------------------------
-
-DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-PVE_SOURCE="$DIR/../../common/pve/source"
-BASH_SOURCE="$DIR/../../common/bash/source"
-
 #---- Dependencies -----------------------------------------------------------------
-
-# Check for Internet connectivity
-if nc -zw1 google.com 443; then
-  echo
-else
-  echo "Checking for internet connectivity..."
-  echo -e "Internet connectivity status: \033[0;31mDown\033[0m\n\nCannot proceed without a internet connection.\nFix your PVE hosts internet connection and try again..."
-  echo
-  exit 0
-fi
-
-# Run Bash Header
-source $PVE_SOURCE/pvesource_bash_defaults.sh
 
 # Check IP
 ipvalid () {
@@ -485,3 +467,7 @@ fi
 sed -i 's|#ZED_EMAIL_ADDR.*|ZED_EMAIL_ADDR="root"|g' /etc/zfs/zed.d/zed.rc
 
 #---- Finish Line ------------------------------------------------------------------
+
+section "Completion Status."
+msg "Success. Task complete."
+echo

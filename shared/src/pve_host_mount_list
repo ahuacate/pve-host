@@ -1,0 +1,17 @@
+# Mount Category : PVE ES auto mount (0 = yes, 1 = no)
+#None:Ignore this share:1
+Audio:Audiobooks and podcasts:0
+Backup:PVE LXC settings backup storage:0
+Books:Ebooks and Magazines:0
+Cloudstorage:Private user cloud storage:0
+Docker:Docker storage:0
+Downloads:General Download folders:0
+Git:GIT folder:1
+Homes:Users home folders:1
+Music:Music, Albums and Songs:0
+Photo:Photographic image collection:0
+Public:General public storage folder:0
+Timemachine:Apple Time machine folder:1
+Transcode:Dedicated Video Transcoding disk:0
+Video:All video libraries (i.e movies, series, homevideos):0
+#Exit/Finished:Nothing more to add:1

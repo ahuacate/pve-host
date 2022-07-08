@@ -9,33 +9,11 @@
 #bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_fullbuild.sh)"
 
 #---- Source -----------------------------------------------------------------------
-
-DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-PVE_SOURCE="$DIR/../../common/pve/source"
-BASH_SOURCE="$DIR/../../common/bash/source"
-
 #---- Dependencies -----------------------------------------------------------------
-
-# Check for Internet connectivity
-if nc -zw1 google.com 443; then
-  echo
-else
-  echo "Checking for internet connectivity..."
-  echo -e "Internet connectivity status: \033[0;31mDown\033[0m\n\nCannot proceed without a internet connection.\nFix your PVE hosts internet connection and try again..."
-  echo
-  exit 0
-fi
-
-# Run Bash Header
-source $PVE_SOURCE/pvesource_bash_defaults.sh
-
 #---- Static Variables -------------------------------------------------------------
 
 # Host IP
 PVE_HOST_IP=$(hostname -i)
-
-# Easy Script Section Header Body Text
-SECTION_HEAD='PVE Host Manager'
 
 #---- Other Variables --------------------------------------------------------------
 #---- Other Files ------------------------------------------------------------------
@@ -51,9 +29,8 @@ Optional tasks to be performed include:
 
       PREREQUISITES BASICS
   --  Set Proxmox subscription status
-  --  Install Nbtscan, ifupdown2 SW
+  --  Install Nbtscan SW
   --  Adjust sysctl parameters
-  --  Adjust swappiness
   --  PVE Container Mapping ( A must if you want to use any of our PVE VM or CT builds )
 
       NETWORK
@@ -61,7 +38,7 @@ Optional tasks to be performed include:
   --  Set PVE IPv4 address
   --  Set PVE hostname
 
-      PVE STORAGE MOUNTS ( Primary OVE Hosts only )
+      PVE STORAGE MOUNTS ( Primary PVE Hosts only )
   --  Create NFS and/or CIFS backend storage pools for the PVE hosts.
 
       SMTP EMAIL ALERTS
@@ -89,8 +66,7 @@ while true; do
     [Nn]*)
       info "You have chosen to skip this step."
       echo
-      exit 0
-      break
+      return
       ;;
     *)
       warn "Error! Entry must be 'y' or 'n'. Try again..."
@@ -100,32 +76,37 @@ while true; do
 done
 
 #---- Run setup basics
-/tmp/pve-host-setup/scripts/pve_host_setup_basics.sh
+source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_basic.sh
 
-#---- Run setup networking
-/tmp/pve-host-setup/scripts/pve_host_setup_networking.sh
+#---- Run setup hostname
+source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_hostname.sh
+
+#---- Run setup network
+source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_network.sh
 
 #---- Run setup NFS storage mount
 if [ ${PVE_TYPE} = 1 ]; then
-  /tmp/pve-host-setup/scripts/pve_host_add_nfs_mounts.sh
+  source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_add_nfs_mounts.sh
 fi
 #---- Run setup SMB/CIFS storage mount
 if [ ${PVE_TYPE} = 1 ]; then
-  /tmp/pve-host-setup/scripts/pve_host_add_cifs_mounts.sh
+  source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_add_cifs_mounts.sh
 fi
 
 #---- Run setup Postfix & Email alerts
-/tmp/pve-host-setup/scripts/pve_host_setup_postfix.sh
-
+if [ ${PVE_TYPE} = 1 ]; then
+  source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_postfix.sh
+fi
 #---- Run setup Install SSH keys
-/tmp/pve-host-setup/scripts/pve_host_setup_sshkey.sh
-
+if [ ${PVE_TYPE} = 1 ]; then
+  source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_sshkey.sh
+fi
 #---- Run setup Fail2ban
-/tmp/pve-host-setup/scripts/pve_host_setup_fail2ban.sh
+source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_fail2ban.sh
 
 #---- Apply Hostname change ( if required )
 if [ "${PVE_HOSTNAME}" != "$HOSTNAME" ]; then
-  /tmp/pve-host-setup/scripts/source/pve_host_setup_networking_hostnameupdate.sh
+  source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_hostnameupdate.sh
 fi
 
 
