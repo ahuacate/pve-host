@@ -1,6 +1,6 @@
 <H1>PVE Host Setup</H1>
 
-This guide is for configuring new Proxmox (PVE) hosts.
+This guide is for configuring Proxmox hosts.
 
 Included are step-by-step instructions and an Easy Script Toolbox to automate much of the work. On completion, your new PVE host is configured to support all Ahuacate CTs and VMs.
 
