@@ -163,6 +163,10 @@ else
   echo "fs.inotify.max_user_watches = 8192" >> /etc/sysctl.conf
 fi
 
+# Set /etc/vzdump.conf tmp dir
+msg "Setting vzdump temporary dir variable..."
+sed -i -r '/^#?tmpdir:.*/c\tmpdir: \/tmp' /etc/vzdump.conf
+echo
 
 #---- PVE Container Mapping
 if [[ ! $(grep -qxF 'root:65604:100' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:100:1' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:1605:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1606:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1607:1' /etc/subuid) ]]; then
@@ -214,6 +218,6 @@ fi
 
 #---- Finish Line ------------------------------------------------------------------
 
-section "Completion Status."
+section "Completion Status"
 msg "Success. Task complete."
 echo

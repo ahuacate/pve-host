@@ -1,63 +1,73 @@
-<H1>PVE Host Setup and Toolbox</H1>
+<H1>PVE Host Setup</H1>
 
-This guide is about installing PVE host hardware. We recommend you read this guide before attempting a PVE host build.
+This guide is for configuring new Proxmox (PVE) hosts.
 
-Our Easy Script Toolbox add-ons make all the required changes and configurations in preparation to support any Ahuacate CT or VM.
+Included are step-by-step instructions and an Easy Script Toolbox to automate much of the work. On completion, your new PVE host is configured to support all Ahuacate CTs and VMs.
 
-It is a mandatory requirement Toolbox add-on 'PVE Basic' is run on all PVE hosts (primary and secondary). PVE Basic includes <span style="color:red">critical PVE Container UID & GID mapping required by all Ahuacate CTs and VMs</span> resolving permission rights for bind-mounted shared data.
+The East Script Toolbox add-on "PVE Basic" must be run on all PVE hosts (primary and secondary). "PVE Basic" includes <span style="color:red">critical PVE Container UID & GID mapping required by all Ahuacate CTs and VMs</span> resolving permission rights for bind-mounted shared data.
 
 <h2>Features</h2>
-Toolbox add-ons prepare your PVE hosts to support any Ahuacate CT or VM. Toolbox add-ons include the following tasks:
 
-1. PVE Basic - required by all PVE hosts (mandatory / required)
+* Step-by-step Proxmox installation instructions
+* Configure PVE host networking, hostnames and DNS
+* Configure network switches and VLANs
+
+Easy Script Toolbox menu includes the following tasks.
+
+* PVE Basic - required by all PVE hosts (mandatory/required)
     - Update Proxmox
     - Check and set Proxmox subscription key (free or enterprise)
     - Install nbtscan SW
     - Adjust sysctl parameters
     - Perform PVE container (CT) mapping
-2. PVE Full Build - run all toolbox add-ons
-3. PVESM NFS Storage - add additional NFS PVE storage mounts
-4. PVESM SMB/CIFS Storage - add additional SMB/CIFS storage mounts
-5. PVE Hostname Updater - change the hostname of a node
-6. PVE Network Updater - change a hosts network configuration
-7. Fail2Ban Installer
-8. SSMTP Email Installer
-9. SSH Key Installer -  add or create your own private SSH access key
+* PVESM NFS Storage - add additional NFS PVE storage mounts
+* PVESM SMB/CIFS Storage - add additional SMB/CIFS storage mounts
+* PVE Hostname Updater - change the hostname of a node
+* Fail2Ban Installer
+* SSMTP Email Installer
+* PVE CT updater - mass update all CT OS
 
-Remember 'PVE Basic' must be run on all PVE hosts.
+<h2>Prerequisites</h2>
 
-**Prerequisites**
+**Network Prerequisites**
 Network prerequisites are:
 - [x] Layer 2/3 Network Switches
 - [x] Network Gateway is `XXX.XXX.XXX.5` ( *default is 192.168.1.5* )
 - [x] Network DHCP server is `XXX.XXX.XXX.5` ( *default is 192.168.1.5* )
 - [x] Internet access for the PVE host
-
 - [x] File server or NAS (i.e NAS-01) . Our default NAS IPv4 address is `XXX.XXX.XXX.10` ( *default is 192.168.1.10* )
-- [x] File server or NAS is configured with network shares, either CIFS or NFS, as per these guides:
-  - PVE hosted NAS [build guide](https://github.com/ahuacate/pve-nas)
+- [x] File server or NAS configured with network shares, either CIFS or NFS, as per these guides:
   - OEM (Synology) or Linux NAS [build guide](https://github.com/ahuacate/nas-hardmetal)
+  - PVE hosted NAS [build guide](https://github.com/ahuacate/pve-nas)
 
-Other prerequisites (information the User should have available before starting):
+**Other Prerequisites**
+Optional information required running specific Easy Script Toolbox add-ons.
 
 - [ ] SMB/NAS CIFS user account credentials as per these (Only if your adding PVE storage using NAS SMB/CIFS storage mounts)
 - [ ] Optional PVE Postfix
   - Email account credentials
   - MailGun account credentials
 
->Note: The network Local Domain or Search domain must be set. We recommend only top-level domain (spTLD) names for residential and small networks names because they cannot be resolved across the internet. Routers and DNS servers know, in theory, not to forward ARPA requests they do not understand onto the public internet. It is best to choose one of our listed names: local, home.arpa, localdomain or lan only. Do NOT use made-up names.
+<h2>Local DNS Records</h2>
 
-<h2><b>Easy Scripts</b></h2>
+We recommend <span style="color:red">you read</span> about network Local DNS and why a PiHole server is a necessity. Click <a href="https://github.com/ahuacate/common/tree/master/pve/src/local_dns_records.md" target="_blank">here</a> to learn more before proceeding any further.
 
-Easy Scripts automate the installation and/or configuration processes. Easy Scripts are hardware type-dependent so choose carefully. Easy Scripts are based on bash scripting. `Cut & Paste` our Easy Script command into a terminal window, press `Enter`, and follow the prompts and terminal instructions. 
+Your network Local Domain or Search domain must be also set. We recommend only top-level domain (spTLD) names for residential and small networks names because they cannot be resolved across the internet. Routers and DNS servers know, in theory, not to forward ARPA requests they do not understand onto the public internet. It is best to choose one of our listed names: local, home.arpa, localdomain or lan only. Do NOT use made-up names.
 
-Our Easy Scripts have preset configurations. The installer may accept or decline the ES values. If you decline the User will be prompted to input all required configuration settings. PLEASE read our guide if you are unsure.
+<h2>Easy Scripts</h2>
 
-<h4><b>PVE Host Toolbox Easy Script</b></h4>
-Built for any PVE host. You must first SSH login to your PVE host `ssh root@IP_address`. Then you must run the following command.
+Easy Scripts automate the installation and/or configuration processes. Easy Scripts are hardware type-dependent so choose carefully. Easy Scripts are based on bash scripting. `Cut & Paste` our Easy Script command into an SSH terminal window, press `Enter`, and follow the prompts and terminal instructions. 
+
+Our Easy Scripts have preset configurations. The installer may accept or decline the ES values. If you decline the User will be prompted to input all required configuration settings. Please read our guide if you are unsure.
+
+<h4><b>Easy Script Toolbox</b></h4>
+
+Before running the Easy Script Toolbox first configure your Proxmox hosts networking (Read-on).
+
+SSH login to your PVE host `ssh root@IP_address`. Then run the following command.
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/pve_host_setup_toolbox.sh)"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/pve_host_toolbox.sh)"
 ```
 
 <hr>
@@ -68,57 +78,47 @@ bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup
 
 - [1. Prepare your Hardware](#1-prepare-your-hardware)
     - [1.1. PVE OS Installation](#11-pve-os-installation)
-        - [1.1.1. PVE OS Install - Primary & Secondary Host](#111-pve-os-install---primary--secondary-host)
+        - [1.1.1. PVE OS Install](#111-pve-os-install)
         - [1.1.2. Proxmox VE OS Install - Final Steps](#112-proxmox-ve-os-install---final-steps)
-- [2. File Server (NAS)](#2-file-server-nas)
-- [3. Network Switch Setup - VLANs, 802.3ad, PfSense, OpenVPN Gateway](#3-network-switch-setup---vlans-8023ad-pfsense-openvpn-gateway)
-    - [3.1. Network Options - Ready PVE-01 for pfSense](#31-network-options---ready-pve-01-for-pfsense)
-    - [3.2. Network Options - Basic (no pfSense)](#32-network-options---basic-no-pfsense)
-    - [3.3. Configure your Network Switch - pfSense](#33-configure-your-network-switch---pfsense)
-        - [3.3.1. Set Network Switch port profiles and LAG groups - pfSense](#331-set-network-switch-port-profiles-and-lag-groups---pfsense)
-        - [3.3.2. Create Network Switch VLANs - pfSense](#332-create-network-switch-vlans---pfsense)
-        - [3.3.3. Setup network switch ports - pfSense](#333-setup-network-switch-ports---pfsense)
-        - [3.3.4. Setup network WiFi SSiDs for the VPN service - pfSense](#334-setup-network-wifi-ssids-for-the-vpn-service---pfsense)
-        - [3.3.5. Edit your UniFi network firewall - pfSense](#335-edit-your-unifi-network-firewall---pfsense)
-- [4. PVE Host Toolbox](#4-pve-host-toolbox)
-        - [4.0.6. SMTP Server Credentials](#406-smtp-server-credentials)
-    - [4.1. Run our PVE Host Toolbox Easy Script](#41-run-our-pve-host-toolbox-easy-script)
-- [5. Other PVE Host Stuff](#5-other-pve-host-stuff)
-    - [5.1. Create a PVE Cluster](#51-create-a-pve-cluster)
-        - [5.1.1. Create a Cluster](#511-create-a-cluster)
-        - [5.1.2. Join the other Nodes to the New Cluster](#512-join-the-other-nodes-to-the-new-cluster)
-        - [5.1.3. How to delete an existing cluster on a node](#513-how-to-delete-an-existing-cluster-on-a-node)
-- [6. Maintenance Tools](#6-maintenance-tools)
-    - [6.1. Toolbox Updater for all CTs OS](#61-toolbox-updater-for-all-cts-os)
+- [2. Prepare Proxmox network interfaces](#2-prepare-proxmox-network-interfaces)
+    - [2.1. PVE Host - single NIC](#21-pve-host---single-nic)
+    - [2.2. PVE Host - Dual NIC (PfSense support)](#22-pve-host---dual-nic-pfsense-support)
+- [3. Prepare network switch](#3-prepare-network-switch)
+    - [3.1. Configure UniFi LAN networks](#31-configure-unifi-lan-networks)
+        - [3.1.1. Configure UniFi default network](#311-configure-unifi-default-network)
+        - [3.1.2. Configure UniFi WAN network (VLAN2)](#312-configure-unifi-wan-network-vlan2)
+    - [3.2. Assign UniFi switch ports](#32-assign-unifi-switch-ports)
+        - [3.2.1. Assign switch port to PVE-LAN](#321-assign-switch-port-to-pve-lan)
+        - [3.2.2. Assign switch port to WAN VLAN2](#322-assign-switch-port-to-wan-vlan2)
+- [4. File Server (NAS)](#4-file-server-nas)
+    - [4.1. NAS Appliance](#41-nas-appliance)
+    - [4.2. PVE NAS](#42-pve-nas)
+- [5. PVE Easy Script Toolbox](#5-pve-easy-script-toolbox)
+    - [5.1. Run our PVE Host Toolbox Easy Script](#51-run-our-pve-host-toolbox-easy-script)
+    - [5.2. PVE Basic](#52-pve-basic)
+    - [5.3. PVESM NFS Storage](#53-pvesm-nfs-storage)
+    - [5.4. PVESM SMB/CIFS Storage](#54-pvesm-smbcifs-storage)
+    - [5.5. PVE Hostname Updater](#55-pve-hostname-updater)
+    - [5.6. Fail2Ban Installer](#56-fail2ban-installer)
+    - [5.7. SMTP Server Credentials (Recommended)](#57-smtp-server-credentials-recommended)
+    - [5.8. PVE CT updater](#58-pve-ct-updater)
+- [6. Create a PVE Cluster](#6-create-a-pve-cluster)
+    - [6.1. Create a Cluster](#61-create-a-cluster)
+    - [6.2. Join the other Nodes to the New Cluster](#62-join-the-other-nodes-to-the-new-cluster)
+    - [6.3. How to delete an existing cluster on a node](#63-how-to-delete-an-existing-cluster-on-a-node)
 
 <!-- /TOC -->
 <hr>
 
 # 1. Prepare your Hardware
 
-PVE hosts can be any x86 hardware with a few conditions. The hardware should have Intel NIC devices (clone NICs seem okay).
+Proxmox installs on any x86 hardware with a few conditions. The hardware should have Intel NIC devices and commercial grade SSD or NVMe drives.
 
-In this guide, you have the option to build a PVE host which also serves as a backend NAS with an optional SSD cache. PVE supports ZFS and LVM filesystems which support RAID and any number of storage disks. You can read about our containerized PVE NAS solutions [here](https://github.com/ahuacate/pve-nas) which uses a PVE Ubuntu CT as the frontend.
+Your installation options are determined by your hardware specifications and requirements.
 
-PVE host hardware with 3x or more Intel ethernet NICs has the option to support the pfSense VM build. With pfSense you can install OpenVPN Gateways, HAProxy servers, and more using multiple NICs and VLANs.
-
-Secondary PVE cluster hosts or nodes need only a 1x ethernet NIC. A minimum of two secondary PVE hosts is required to form a cluster quorum in the event a PVE host fails.
-
-Remember when your primary PVE-01 host goes offline your PfSense services (i.e. OpenVPN, HAProxy) are also offline.
-
-**Primary Host Build** (Could serve as a PVE File Server NAS)
-*  Quality Mainboard Hardware
-*  4x LAN PCIe Intel I350-T4  (optional)
-*  10GbE Intel NIC (optional)
-*  CPU support for Intel AES-NI, QAT Crypto (required by pfSense addon service OpenVPN)
-*  16Gb RAM (Recommend 32Gb ECC)
-*  1x 240Gb Samsung PM883 (Recommend 2x SSDs in Raid1)
-*  2x 480Gb Samsung PM883 for Boot & NAS Cache (optional - For NAS backend)
-*  6-10TB Rotational Disks (Optional - For NAS backend)
-
-**Secondary Host Build** - Cluster Node Hardware
-* Any X86 hardware to complete a 3x PVE host cluster
-* Hardware example: Intel Celeron, Pentium, i3/i5/i7 NUC models with minimum 16Gb RAM and 1x LAN 1GbE NIC (Intel NIC)
+PVE hosts require 1x or 2x ethernet NIC adapters and single boot disk device. A standard PVE host can be installed as your primary or secondary PVE host for creating a PVE cluster. A minimum of two secondary PVE hosts is required to form a cluster quorum in the event a PVE host fails.
+* 1x ethernet NIC - This is a standard generic build. Not suitable for hosting a pfSense VM.
+* 2x or more ethernet NIC - Suitable for hosting a pfSense VM.
 
 ## 1.1. PVE OS Installation
 Go to the Proxmox website and [download](https://www.proxmox.com/en/downloads) the latest ISO and burn it to a USB stick. Instructions are [here](https://pve.proxmox.com/wiki/Prepare_Installation_Media).
@@ -127,386 +127,326 @@ In this guide, we refer to SCSi and SATA (Serial ATA) controller devices designa
 
 Some main boards may not show disk devices as `sda/sdb/sdc` because the SSD is not installed on a SCSi or SATA controller. For example, NVMe drives show as /dev/nvme0(n1..). It's most important to check your hardware device schematics and note which device type is designated to which type of hard drive (SSD) you have installed. 
 
-### 1.1.1. PVE OS Install - Primary & Secondary Host
-In this build, you can install 1 or 2 enterprise-grade SSD in your host.
-
+### 1.1.1. PVE OS Install
 Boot from the Proxmox installation USB stick and configure Proxmox VE as follows:
 
 **Proxmox Virtualization Environment (PVE)** - At this stage you must select your PVE OS installation drives, Raid type and partition sizes. Click 'options' and complete as follows:
 
-| Option                        | Value                 | Notes                                     |
-|-------------------------------|-----------------------|-------------------------------------------|
-| Filesystem - 1x SSD           | `ext4 or zfs (RAID0)` | *Personally I use ZFS*                    |
-| Filesystem - 2x SSD           | `ext4 or zfs (RAID1)` | *Personally I use ZFS - redundancy*       |
-| **Disk Setup - SATA**         |                       |                                           |
-| Harddisk 0                    | /dev/sdx              |                                           |
-| Harddisk 1                    | /dev/sdx              |                                           |
-| **Disk Setup - PCIe NVMe**    |                       |                                           |
-| Harddisk 0                    | /dev/nvmeXn1          |                                           |
-| Harddisk 1                    | /dev/nvmeXn1          |                                           |
-| **Advanced Options**          |                       |                                           |
-| ashift                        | `12`                  | *4K sector size. For 8K sectors use `13`* |
-| compress                      | `lz4`                 |                                           |
-| checksum                      | `on`                  |                                           |
-| copies                        | `1`                   |                                           |
-| SSD size - 240GB (or smaller) | `220`                 | *Over-provisioning to 220GB*              |
+| Option                        | Value                 | Notes                                  |
+|-------------------------------|-----------------------|----------------------------------------|
+| Filesystem - 1x SSD           | `ext4 or zfs (RAID0)` | Ext4 is fine.                          |
+| Filesystem - 2x SSD           | `ext4 or zfs (RAID1)` | Ext4 is fine.                          |
+| **Disk Setup - SATA**         |                       |                                        |
+| Harddisk 0                    | /dev/sdx              |                                        |
+| Harddisk 1                    | /dev/sdx              |                                        |
+| **Disk Setup - PCIe NVMe**    |                       |                                        |
+| Harddisk 0                    | /dev/nvmeXn1          |                                        |
+| Harddisk 1                    | /dev/nvmeXn1          |                                        |
+| **Advanced Options**          |                       |                                        |
+| ashift                        | `12`                  | 4K sector size. For 8K sectors use 13. |
+| compress                      | `lz4`                 |                                        |
+| checksum                      | `on`                  |                                        |
+| copies                        | `1`                   |                                        |
+| SSD size - 240GB (or smaller) | `220`                 | Over-provisioning is recommended.      |
 
 
 ### 1.1.2. Proxmox VE OS Install - Final Steps
 
-The final step is to configure a basic network device. If you have multiple onboard ethernet LAN NIC devices, 10GbE ethernet or a multi-port Intel PCIe LAN Card installed, you must choose *one single device only* to configure at this stage.
+The final step is to configure a network device. If you have multiple onboard ethernet LAN NIC devices, 10GbE ethernet or a multi-port Intel PCIe LAN Card installed, you must choose *one single device only* to configure at this stage.
 
-If you have 10GbE ethernet, on a primary or secondary PVE host, then always select and configure the 10GbE device.
+The selected device will be your LAN. If you have 10GbE ethernet, on a primary or secondary PVE host, then always select and configure the 10GbE device.
 
 If your PVE host has only 1GbE LAN NICs then you must choose the first ethernet device ID of either an onboard mainboard Intel NIC or if available the first device of your installed Intel PCIe LAN Card. Your decision is based on how many valid (Intel brand) ethernet devices are available ignoring all other brands if you can. For example, if you have an Intel I350-T4 PCIe x4 LAN Card 4x Port installed and 2x onboard **Realtek** NICs, always ignore the 2x **Realtek** devices from all selection criteria. Try to use only Intel NICs whenever possible.
 
 Here's a table to help you understand your options:
 
-|                             | Port 1 | Port 2 | Port 3 | Port 4 | Port 5 | Port 6 |
-|-----------------------------|--------|--------|--------|--------|--------|--------|
-| 10GbE SFP+                  | ✅      |        |        |        |        |        |
-| Onboard x2 (Realtek)        | ❌      | ❌      |        |        |        |        |
-| Intel PCIe LAN Card 6x Port | ☑      | ☑      | ☑      | ☑      | ☑      | ☑      |
-|                             |        |        |        |        |        |        |
-| Onboard x1 (Intel)          | ✅      |        |        |        |        |        |
-| Intel PCIe LAN Card 2x Port | ☑      | ☑      |        |        |        |        |
-|                             |        |        |        |        |        |        |
-| Onboard x2 (Intel)          | ✅      | ☑      |        |        |        |        |
-| Intel PCIe LAN Card 2x Port | ☑      | ☑      |        |        |        |        |
-|                             |        |        |        |        |        |        |
-| Onboard x1 (Realtek)        | ❌      |        |        |        |        |        |
-| Intel PCIe LAN Card 4x Port | ✅      | ☑      | ☑      | ☑      |        |        |
+|| Port 1 | Port 2 | Port 3 | Port 4
+| :--- | :--- | :--- | :--- | :--- 
+| **Example 1**
+| 10GbE SFP+ | ✅ 
+| Onboard x2 (Realtek) | ❌ | ❌
+| Intel PCIe LAN Card 4x Ports | ☑ | ☑ | ☑ | ☑ 
+| **Example 2**
+| Onboard x1 (Intel) | ✅
+| Intel PCIe LAN Card 2x Ports | ☑ | ☑
+| **Example 3**
+| Onboard x2 (Intel) | ✅ | ☑
+| Intel PCIe LAN Card 2x Ports | ☑ | ☑
+| **Example 4**
+| Onboard x1 (Realtek) | ❌
+| Intel PCIe LAN Card 4x Ports | ✅ | ☑ | ☑ | ☑ 
 
-Primary PVE hosts must be assigned hostname `pve-01.local`, IPv4 address of `192.168.1.101` or at least denoted by xxx.xxx.xxx.`101`, and if your want to create a pfSense OpenVPN Gateway for your network clients then you must have a minimum of 3x Intel Ethernet LAN NICs available (i.e. PCIe Intel I350-T4 card installed) in your primary host. 
+Primary PVE hosts must be assigned hostname `pve-01.local`, IPv4 address of `192.168.1.101` or at least denoted by xxx.xxx.xxx.`101`.
 
-The remaining steps in configuring PVE are self-explanatory. Configure each PVE host as follows:
+If your want to create a pfSense OpenVPN Gateway for your network clients then you must have a minimum of 2x Intel Ethernet LAN NICs available in all PVE hosts. 
 
-| Option               | Primary Host            | Secondary Host          | Secondary Host          | Notes                                                                                                                                                                                            |
-|----------------------|-------------------------|-------------------------|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Country              | Type your Country       | Type your Country       | Type your Country       |                                                                                                                                                                                                  |
-| Timezone             | Select                  | Select                  | Select                  |                                                                                                                                                                                                  |
-| Keymap               | `en-us`                 | `en-us`                 | `en-us`                 |                                                                                                                                                                                                  |
-| Password             | Enter your new password | Enter your new password | Enter your new password | *Same root password on all nodes*                                                                                                                                                                |
-| E-mail               | Enter your Email        | Enter your Email        | Enter your Email        | *You best use a valid email address (recommended). It needs to be valid for PVE Postfix alerts and other email services to work. If you don't want to enter a valid email type mail@example.com* |
-| Management interface | Leave Default           | Leave Default           | Leave Default           |                                                                                                                                                                                                  |
-| Hostname             | `pve-01.local`          | `pve-02.local`          | `pve-03.local`          | *Note the naming convention and use of 'local'*                                                                                                                                                  |
-| IP Address           | `192.168.1.101`         | `192.168.1.102`         | `192.168.1.103`         | *Note the IP number assignments - XXX.XXX.XXX.101 > .102 > .103 >*                                                                                                                               |
-| Netmask              | `255.255.255.0`         | `255.255.255.0`         | `255.255.255.0`         |                                                                                                                                                                                                  |
-| Gateway              | `192.168.1.5`           | `192.168.1.5`           | `192.168.1.5`           |                                                                                                                                                                                                  |
-| DNS Server 1         | `192.168.1.254`         | `192.168.1.254`         | `192.168.1.254`         | *Set to use a PiHole CT at this static IP*                                                                                                                                                       |
-| DNS Server 2         | `192.168.1.5`           | `192.168.1.5`           | `192.168.1.5`           | *Set to use your router static IP*                                                                                                                                                               |
+The remaining steps in configuring PVE are self-explanatory. Configure each PVE host as follows.
 
+| Option | Primary Host | Secondary Host | Secondary Host | Notes
+|:--- |:--- |:--- |:--- |:--- 
+| Country | Input your Country | Input your Country | Input your Country
+| Timezone | Select | Select | Select
+| Keymap | `en-us` | `en-us` | `en-us`                                 |
+| Password | Enter your new password | Enter your new password | Enter your new password | Same user credentials on all nodes.
+| E-mail | Enter your Email | Enter your Email | Enter a your Email | Use a valid email address. It needs to be valid for PVE Postfix alerts and other email services to work. If you don't want to enter a valid email type mail@example.com.
+| Management interface | Leave Default | Leave Default | Leave Default
+| Hostname | `pve-01.local` | `pve-02.local` | `pve-03.local` | Note the naming convention and use of 'local'. We recommend only top-level domain (spTLD) names for residential and small networks names because they cannot be resolved across the internet. Routers and DNS servers know, in theory, not to forward ARPA requests they do not understand onto the public internet. It is best to choose one of our listed names: local, home.arpa, localdomain or lan only. Do NOT use made-up names.
+| IP Address  | `192.168.1.101` | `192.168.1.102` | `192.168.1.103` | Note the IP number assignments - XXX.XXX.XXX.101 > .102 > .103 >                                             |
+| Netmask | `255.255.255.0` | `255.255.255.0` | `255.255.255.0` 
+| Gateway | `192.168.1.5` | `192.168.1.5` | `192.168.1.5` | UniFi UGS/UDM or router.
+| DNS Server 1 | `192.168.1.6` | `192.168.1.6` | `192.168.1.6` | Set to use PiHole.
+| DNS Server 2 | `192.168.1.5` | `192.168.1.5` | `192.168.1.5`| Set to use your router static IP.
+
+<hr>
+
+# 2. Prepare Proxmox network interfaces
+
+Your LAN network switches must be L2/L3 compatible to support VLANs.
+
+If you have extra NICs available you may consider using 802.3ad Dynamic link aggregation on these hosts too to increase bandwidth. The internet is your information source about LAGs. When considering LAGs the network switch appliance side will use 802.3ad Dynamic link aggregation (802.3ad)(LACP) so your switch must be 802.3ad compliant.
+
+It's important the PVE Linux Bridge, Bond and VLAN naming convention is adhered to. This naming convention is used in all our Proxmox builds and Easy Scripts.
+
+Linux Network Device names vary because they are determined by the host's mainboard (here we use *enp1s0-enp01s1*).
+
+In the example below we use standard 1GBe NICs. This example is made for hosting a pfSense VM (vmbr2).
+
+![alt text](./images/Proxmox-network2.png)
+
+In the example below we use LAGs for illustration purposes only. This example is also made for hosting a pfSense VM.
+
+![alt text](./images/Proxmox-network.png)
+
+## 2.1. PVE Host - single NIC
+
+Configure a PVE Linux Bridge `vmbr0` using a single 1GbE, 10GbE, or a PVE Linux Bond.
+
+The input name `vmbr0` is critical.
+
+| Linux Bridge ||
+| :--- | :---
+| Name | vmbr0
+| IPv4/CIDR | `192.168.1.101/24`
+| Gateway (IPv4) | `192.168.1.5`
+| IPv6/CIDR | Leave blank
+| Gateway (IPv6) | Leave blank
+| Autostart | `☑`
+| VLAN aware | `☑`
+| Bridge ports | Input your NIC name (i.e enp1s0)
+| Comment | `Default LAN`
+| MTU | 1500
+
+## 2.2. PVE Host - Dual NIC (PfSense support)
+
+PVE pfSense VM requires 2x ethernet NICs. A LAN and a WAN (VPN-egress).
+
+Configure a PVE Linux Bridge `vmbr0` and `vmbr2` using a single 1GbE, 10GbE, or a PVE Linux Bond. The fastest NIC should be assigned to `vmbr0`.
+
+The input names `vmbr0` abd `vmbr2` are critical.
 
-# 2. File Server (NAS)
+| Linux Bridge |||
+| :--- | :--- | :---
+| Name | `vmbr0` | `vmbr2`
+| IPv4/CIDR | `192.168.1.101/24` | Leave blank
+| Gateway (IPv4) | `192.168.1.5` | Leave blank
+| IPv6/CIDR | Leave blank | Leave blank
+| Gateway (IPv6) | Leave blank | Leave blank
+| Autostart | `☑` | `☑`
+| VLAN aware | `☑` | `☑`
+| Bridge ports | Input your NIC name (i.e enp1s0) | Input your NIC name (i.e enp1s1) 
+| Comment | `Default LAN` | `VPN-egress`
+| MTU | 1500 | 1500
 
-You must have a running network-accessible file server (NAS) that supports NFS and/or CIFS sharing protocol. Proxmox provides storage to VMs by creating a CIFS or NFS backend storage pool by mounting your NAS export shares points.
+<hr>
 
-The NAS server CIFS or NFS properties must be configured so your PVE host backend can mount these NAS shares automatically.
+# 3. Prepare network switch 
 
-Your options are:
+These instructions are based on an UniFi US-24 port switch. Just transpose the settings to whatever brand of Layer 2/3 Switch you use.
 
-**NAS Appliance** - A NAS of any brand or type (Synology, OMV, QNap, FreeNAS, Windows or Linux server). The NAS must on your available on your LAN network preferably with IPv4 address `XXX.XXX.XXX.10` ( *ahuacate default is 192.168.1.10* ). The NAS must support SMB3, NFSv4.1 and ACL services.
+## 3.1. Configure UniFi LAN networks
+We use VLANs to separate networks for easier management and to apply security policies.
 
-**PVE NAS** - A PVE NAS storage pool using ZFS or LVM Raid (backend) can be hosted on a Proxmox host (preferred pve-01). Frontend management and NAS services are by a PVE Ubuntu CT (hostname label NAS-01). NAS-01 fully supports SMB3, NFSv4.1 and ACL services. A detailed guide with build options is available [here](https://github.com/ahuacate/pve-nas).
+![alt text](./images/UniFi-Networks.png)
 
+### 3.1.1. Configure UniFi default network
+The first step is to edit your default LAN network configuration.
 
-# 3. Network Switch Setup - VLANs, 802.3ad, PfSense, OpenVPN Gateway
+Navigate using the UniFi controller web interface to `Settings` > `Networks` > `Create New Network` and complete as follows.
 
-If you've chosen to install a PfSense and OpenVPN Gateway server on PVE-01 then you must make additional network modifications. Your LAN network switches must be L2/L3 compatible because you need to set up VLANs.
+| Description | Default
+| :---  | :---
+| Network Name |`Default`
+| GatewayIP/Subnet | `☐` Auto Scale Network
+|| `192.168.1.5/24`
+| **Advanced Configuration** | `manual`
+| Network Type | `☑` Standard `☐` Guest
+| IGMP Snooping | `☑` Enable
+| Multicast DNS | `☐` Enable
+| Network Group | `LAN`
+| **DHCP**
+| DHCP Mode | `DHCP Server`
+| DHCP Range | `192.168.1.150`-`192.168.1.250`
+| DHCP Service Management
+| DHCP DNS Server | `☑` Enabled
+|| `192.168.1.6` (Pi-Hole)
+|| `1.1.1.1`
+| DHCP Default Gateway | `☑` Auto
+| DHCP Lease Time | `86400`
+| Domain Name | `local`
+| **IPv6**
+| IPv6 Interface Type | `☑` None `☐` Static `☐` Prefix 
 
-If you followed our guide then your primary host PVE-01 will have a minimum of 3x Ethernet LAN 1GbE NICs. Builds with 5x Ethernet LAN 1GbE NICs enable you to use 802.3ad Dynamic link aggregation to increase performance and reliability.
 
-Secondary hosts only require 1x Ethernet LAN NIC. If you have more NICs available then use 802.3ad Dynamic link aggregation on these hosts too to increase bandwidth.
+### 3.1.2. Configure UniFi WAN network (VLAN2)
+Create a dedicated VLAN2 network for pfSense WAN only (labeled VPN-egress). All pfSense VPN traffic will exit pfSense on WAN VLAN2. For added security, we assign VLAN2 Guest status.
 
-You should by now have at least your primary host PVE-01 ready and running. In the next steps, we need to configure your LAN network switches to match your PVE hosts' needs.
+Navigate using the UniFi controller web interface to `Settings` > `Networks` > `Create New Network` and complete as follows.
 
-## 3.1. Network Options - Ready PVE-01 for pfSense
+| Description | LAN-egress
+| :---  | :---
+| Network Name |`LAN-egress`
+| GatewayIP/Subnet | `☐` Auto Scale Network
+|| `192.168.2.5/28`
+| **Advanced Configuration** | `manual`
+| VLAN ID | `2`
+| Network Type | `☐` Standard `☑` Guest
+| IGMP Snooping | `☑` Enable
+| Multicast DNS | `☐` Enable
+| Network Group | `LAN`
+| **DHCP**
+| DHCP Mode | `DHCP Server`
+| DHCP Range | `192.168.2.1`-`192.168.2.14`
+| **IPv6**
+| IPv6 Interface Type | `☑` None `☐` Static `☐` Prefix 
 
-First, decide how many LAN ports you are going to configure on your PVE hosts and network switches. For our PVE-01 pfSense build a minimum of 3x NICs and switch LAN ports is required.
+![alt text](./images/UniFi-Network-VPN.egress.png)
 
-It's important to note there is a PVE Linux Bridge, Bond and VLAN naming convention must be adhered to. This naming convention is used in all our Proxmox builds and Easy Scripts.
+## 3.2. Assign UniFi switch ports
+In UniFi you must assign the 2x physical LAN cables connecting your UniFi switch to your Proxmox host or pfSense device with a UniFi Port Profile. Both LAN and WAN connections must be identified. For cable management I dedicate switch ports 1-6 to my Proxmox cluster.
 
-On PVE-01 we create the following PVE Linux Bridges which are associated with their VLAN ID. The Linux Network Device name varies because it's determined by the host's mainboard (here we use *enp0s0-enp0s3*). The sample below shows a 3x Ethernet LAN NIC configuration, with an optional 4x NIC configuration for a VPN Local Gateway service,  with no PVE Linux Bonds (LAG-802.3ad). 
+### 3.2.1. Assign switch port to PVE-LAN
+Navigate using the UniFi controller web interface to `Devices` > `Select switch device` > `Port Management` and then select the switch port which is physically connected and assigned to Proxmox host or pfSense as LAN.
 
-| PVE Linux Bridge    | Network Devices | Description                                                                   | VLAN ID |
-|---------------------|-----------------|-------------------------------------------------------------------------------|---------|
-| vmbr0               | enp0s0          | PVE HOST NIC ( i.e. 192.168.1.101 )                                           | vlan1   |
-| vmbr2               | enp0s1          | VPN Gateway Egress (WAN encrypted link to the internet)                       | vlan2   |
-| vmbr30              | enp0s2          | VPN World Gateway (LAN gateway for clients to random world VPN servers)       | vlan30  |
-| *Below is optional* |                 |                                                                               |         |
-| vmbr40              | enp0s3          | VPN Local Gateway (LAN gateway for clients to a local in-country VPN servers) | vlan40  |
+My Proxmox and pfSense "LAN" is a port aggregate of UniFi NIC ports 1 & 2 which is not a requirement.
 
-The next table illustrates using PVE Linux Bonds (LAG) of 1GbE slaves and a 10GbE SFP+ NIC. Whenever a 10GbE NIC is available always assigned it to PVE host Linux Bridge vmbr0.
+What important is the UniFi `Port Profile` of your selected NIC port must be assigned as `All`.
 
-Note: Shown below *enp0s0~5* are the hosts 1GbE ethernet NIC devices (Intel PCIe LAN Card 6x Port) and *enp68s0f0* is the 10GbE NIC. Always first create the PVE Linux Bonds and then create the PVE Linux Bridges using the PVE Linux Bonds as the slaves. The above table is an example of the many combinations of network bonds and slaves available to you. But always remember to assign any available 10GbE or the first available PVE Linux Bond to PVE Linux Bridge vmbr0 which is your PVE-01 host LAN.
+![alt text](./images/UniFi-Devices-Port_Management-pvelan.png)
 
-So with a PVE network configuration plan, you must configure your PVE-01 connected network switch to use VLANs and in a pfSense environment you must also assign specific network switch ports to specific VLAN numbers and in the case of vmbr2 you must assign an IPv4 address. 
+### 3.2.2. Assign switch port to WAN VLAN2
+Navigate using the UniFi controller web interface to `Devices` > `Select switch device` > `Port Management` and then select the switch port which is physically connected and assigned to pfSense as WAN (vpn-egress).
 
-Our network is configured to use VLANs in accordance with the network road map shown [here](https://github.com/ahuacate/network-roadmap). 
+My pfSense "WAN" is a port aggregate of UniFi NIC ports 3 & 4 which is not a requirement.
 
-When PVE hosts have multiple 1GbE NICs you can use NIC bonding (also called NIC teaming or Link Aggregation, LAG and in PVE Linux Network Bond) which is a technique for binding multiple NICs to a single network device. By doing link aggregation, two NICs can appear as one logical interface, resulting in double speed. This is a native Linux kernel feature that is supported by most smart L2/L3 switches with IEEE 802.3ad support.
+What important is the UniFi `Port Profile` of your selected NIC port must be assigned as `VPN-egress`.
 
-On the network switch appliance side you are going to use 802.3ad Dynamic link aggregation (802.3ad)(LACP) so your switch must be 802.3ad compliant. This creates aggregation groups of NICs that share the same speed and duplex settings as each other. A link aggregation group (LAG) combines many physical ports to make a single high-bandwidth data path, implement the traffic load sharing among the member ports in the group and enhance connection reliability.
+![alt text](./images/UniFi-Devices-Port_Management-vpnegress.png)
 
-## 3.2. Network Options - Basic (no pfSense)
+<hr>
 
-This is easy. Simply configure PVE Linux Bridge vmbr0 with a single 1GbE, 10GbE, or a PVE Linux Bond for PVE Linux Bridge vmbr0. Nothing more to do. In our Easy Script, you will be prompted for such configurations with no pfSense available.
+# 4. File Server (NAS)
 
-## 3.3. Configure your Network Switch - pfSense
+A network-accessible file server (NAS) that supports NFS and/or CIFS sharing protocol is required. Proxmox provides storage to VMs by creating a CIFS or NFS backend storage pool by mounting your NAS export shares points.
 
-These instructions are based on an UniFi US-24 port switch. Just transpose the settings to UniFi US-48 or whatever brand of Layer 2/3 Switch you use. The examples are guides for setting up the following network switch configurations:
+Your PVE host must be allowed to mount all CIFS or NFS shares automatically.
 
-- 3x LAN 1GbE
-- 4x LAN 1Gb PLUS 10GbE SFP+
-- 4x LAN 1GbE
-- 6x LAN 1GbE
+## 4.1. NAS Appliance
+A NAS of any brand or type (Synology, OMV, QNap, FreeNAS, Windows or Linux server). The NAS must support SMB3, NFSv4 and ACL services. Our NAS default IPv4 address is 192.168.1.10. 
 
-### 3.3.1. Set Network Switch port profiles and LAG groups - pfSense
+## 4.2. PVE NAS
+A PVE based NAS uses a ZFS or LVM Raid backend storage pool hosted on a Proxmox host (preferred pve-01).
 
-For ease of port management, I always use switch ports 1 - (4 or 6) for my primary PVE-01. Configure your network switch port profiles and LAG groups as follows:
-
-**Primary Host Build - Type A - Optional PVE NAS** - 3x LAN 1GbE
-
-| UniFi US-24                    | Port ID               | Port ID                | Port ID                |
-|--------------------------------|-----------------------|------------------------|------------------------|
-| **Port Number**                | 1                     | 2                      | 3                      |
-| **LAG Bond**                   |                       |                        |                        |
-| **Switch Port Profile / VLAN** | All                   | VPN-egress(2)          | LAN-vpngate-world (30) |
-| **LAN cable connected to**     | Port1 ->PVE-01 (NIC1) | Port2 -> PVE-01 (NIC2) | Port3 -> PVE-01 (NIC3) |
-| **PVE Linux Bond**             |                       |                        |                        |
-| **PVE Bridge**                 | vmbr0                 | vmbr2                  | vmbr30                 |
-| **PVE Comment**                | PVE host LAN          | VPN-egress             | vpngate-world          |
-
-Note: The **Switch Port Profile / VLAN** must be first configured in your network switch (UniFi Controller).
-
-**Primary Host Build - Type A - Optional PVE NAS** - 4x LAN 1Gb PLUS 10GbE
-
-| UniFi US-24 Gen2                | SFP+ Port ID            | Port ID                    | Port ID                                         |
-|---------------------------------|-------------------------|----------------------------|-------------------------------------------------|
-| **Port Number**                 |                         | 1                          | 3                                               |
-| **Port Number**                 | 26                      | 2                          | 4                                               |
-| **LAG Bond**                    |                         | LAG 1 & 2                  |                                                 |
-| **Switch Port Profile / VLAN**  | All                     | VPN-egress (2)             | LAN-vpngate-world (30) :LAN-vpngate-local (40)  |
-| **LAN cable connected to**      | N/A                     | Port1+2 -> PVE-01 (NIC1+2) | Port3 -> PVE-01 (NIC3) : Port4 -> PVE-01 (NIC4) |
-| **LAN SFP+ cable connected to** | Port 26 > PVE-01 (SFP+) |                            |                                                 |
-|                                 |                         |                            |                                                 |
-| **Host NIC Ports**              | SFP+                    | Port 1+2                   | Port 3+4                                        |
-| **PVE Linux Bond**              |                         | bond2                      |                                                 |
-| **PVE Bridge**                  | vmbr0                   | vmbr2                      | vmbr30 : vmbr40                                 |
-| **PVE Comment**                 | PVE LAN SFP+            | VPN-egress Bond2           | vpngate-world : vpngate-local                   |
-
-**Primary Host Build - Type A - Optional PVE NAS** - 4x LAN 1GbE
-
-| UniFi US-24                    | Port ID               | Port ID                | Port ID                | Port ID                 |
-|--------------------------------|-----------------------|------------------------|------------------------|-------------------------|
-| **Port Number**                | 1                     | 2                      | 3                      | 4                       |
-| **LAG Bond**                   |                       |                        |                        |                         |
-| **Switch Port Profile / VLAN** | All                   | VPN-egress(2)          | LAN-vpngate-world (30) | :LAN-vpngate-local (40) |
-| **LAN cable connected to**     | Port1 ->PVE-01 (NIC1) | Port2 -> PVE-01 (NIC2) | Port3 -> PVE-01 (NIC3) | Port4 -> PVE-01 (NIC4)  |
-| **PVE Linux Bond**             |                       |                        |                        |                         |
-| **PVE Bridge**                 | vmbr0                 | vmbr2                  | vmbr30                 | vmbr40                  |
-| **PVE Comment**                | PVE host LAN          | VPN-egress             | vpngate-world          | vpngate-local           |
-
-**Primary Host Build - Type A - Optional PVE NAS** - 6x LAN 1GbE
-
-| UniFi US-24                    | Port ID                    | Port ID                    | Port ID                                         |
-|--------------------------------|----------------------------|----------------------------|-------------------------------------------------|
-| **Port Number**                | 1                          | 3                          | 5                                               |
-| **Port Number**                | 2                          | 4                          | 6                                               |
-| **LAG Bond**                   | LAG 1-2                    | LAG 3-4                    |                                                 |
-| **Switch Port Profile / VLAN** | All                        | VPN-egress (2)             | LAN-vpngate-world (30) : LAN-vpngate-local (40) |
-| **LAN cable connected to**     | Port1+2 -> pve-01 (NIC1+2) | Port3+4 -> pve-01 (NIC3+4) | Port5 -> pve-01 (NIC5) : Port6 -> pve-01 (NIC6) |
-|                                |                            |                            |                                                 |
-| **pve-01 NIC Ports**           | Port 1+2                   | Port 3+4                   | Port 5+6                                        |
-| **PVE Linux Bond**             | `bond0`                    | `bond1`                    |                                                 |
-| **PVE Bridge**                 | `vmbr0`                    | `vmbr1`                    | `vmbr2 : vmbr3`                                 |
-| **PVE Comment**                | PVE LAN Bond               | VPN-egress Bond            | vpngate-world : vpngate-local                   |
-
-The above table, based on an UniFi US-24 model, shows port 1+2 are link aggregated (LAG), port 3+4 are another LAG and ports 5 and 6 are NOT LAG'd. So ports 1 to 6 numbering on your switch correspond with the PVE-01 NIC devices (i.e. enp1s0 -  enp1s5).
-
-### 3.3.2. Create Network Switch VLANs - pfSense
-
-Three VLANs are required.
-
-1. VLAN2 - *WAN/VPN-egress (VLAN2)*
-2. VLAN30 - *LAN-vpngate-world (VLAN30)*
-3. VLAN40 - *LAN-vpngate-local (VLAN40)*
-
-These instructions are specifically for UniFi controller `Settings` > `Networks` > `Create New Network`.
-
-*  Create a new network to be used for the Egress of encrypted traffic out of the network to your VPN servers.
-
-| Description    | Value                   | Notes                                                                                                                      |
-|----------------|-------------------------|----------------------------------------------------------------------------------------------------------------------------|
-| Name           | `VPN-egress`            | *This network will be used as the WAN for pfSense OpenVPN clients (encrypted exit).*                                       |
-| Purpose        | `Guest`                 | *Network Guest security policies.*                                                                                         |
-| VLAN           | `2`                     | *A dedicated VLAN for the WAN used by OpenVPN client(s) for network paths and firewall rules use Guest security policies.* |
-| Gateway/Subnet | `192.168.2.5/28`        | *Only 2 addresses on this subnet so /29 is ideal*                                                                          |
-| DHCP Server    | `Enabled`               | *Just use default range 192.168.2.1 -- 192.168.2.14*                                                                       |
-| Other Settings | *Just leave as default* |                                                                                                                            |
-
-* Create **two** new VLAN only networks to be used as VPN gateways by OpenVPN clients in pfSense.
-
-| Description   | Value                   | Notes                                                                                                                                              |
-|---------------|-------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Name          | **`LAN-vpngate-world`** | *This is the network where LAN clients will be restricted to the vpngate-world server*                                                             |
-| Purpose       | `VLAN Only`             | This is critical. *We don't want the UniFi USG to do anything with any client on this VLAN other than be sure that they can get to their gateway.* |
-| VLAN          | `30`                    |                                                                                                                                                    |
-| IGMP Snooping | `Disabled`              |                                                                                                                                                    |
-| DHCP Guarding | `192.168.30.5`          |                                                                                                                                                    |
-|               |                         |                                                                                                                                                    |
-| Name          | **`LAN-vpngate-local`** | *This is the network where LAN clients will be restricted to the vpngate-world server*                                                             |
-| Purpose       | `VLAN Only`             | *This is critical. We don't want the UniFi USG to do anything with any client on this VLAN other than be sure that they can get to their gateway.* |
-| VLAN          | `40`                    |                                                                                                                                                    |
-| IGMP Snooping | `Disabled`              |                                                                                                                                                    |
-| DHCP Guarding | `192.168.40.5`          |                                                                                                                                                    |
-
-### 3.3.3. Setup network switch ports - pfSense
-
-Here we configure the network switch ports.
-
-Again the instructions are for the UniFi controller `Devices` > `Select device - i.e UniFi Switch 24/48` > `Ports`  and select your port and `edit` and `apply` as follows:
-
-| Description           | 3x LAN 1GbE              | 4x LAN 1GbE & SFP+       | 4x LAN 1GbE              | 6x LAN 1GbE              |
-|-----------------------|--------------------------|--------------------------|--------------------------|--------------------------|
-| Name                  | **`Port 1`**             | **`Port 26 (SFP+)`**     | **`Port 1`**             | **`Port 1 & 2`**         |
-| Switch Port Profile   | `All`                    | `All`                    | `All`                    | `All`                    |
-| **Profile Overrides** |                          |                          |                          |                          |
-| Operation             | `☐` Aggregate            | `☐` Aggregate            | `☐` Aggregate            | `☑` Aggregate            |
-| Aggregate Ports       | N/A                      | N/A                      | N/A                      | `1-2`                    |
-| Link Speed            | Autonegotiation          | Autonegotiation          | Autonegotiation          | Autonegotiation          |
-|                       |                          |                          |                          |                          |
-| Name                  | **`Port 2`**             | **`Port 1 & 2`**         | **`Port 2`**             | **`Port 3 & 4`**         |
-| Switch Port Profile   | `VPN-egress(2)`          | `VPN-egress(2)`          | `VPN-egress(2)`          | `VPN-egress(2)`          |
-| **Profile Overrides** |                          |                          |                          |                          |
-| Operation             | `☐` Aggregate            | `☑` Aggregate            | `☐` Aggregate            | `☑` Aggregate            |
-| Aggregate Ports       | N/A                      | `1-2`                    | N/A                      | `3-4`                    |
-| Link Speed            | Autonegotiation          | Autonegotiation          | Autonegotiation          | Autonegotiation          |
-|                       |                          |                          |                          |                          |
-| Name                  | **`Port 3`**             | **`Port 3`**             | **`Port 3`**             | **`Port 5`**             |
-| Switch Port Profile   | `LAN-vpngate-world (30)` | `LAN-vpngate-world (30)` | `LAN-vpngate-world (30)` | `LAN-vpngate-world (30)` |
-| Profile Overrides     | Leave Default            | Leave Default            | Leave Default            | Leave Default            |
-|                       |                          |                          |                          |                          |
-| Name                  |                          | **`Port 4`**             | **`Port 4`**             | **`Port 6`**             |
-| Switch Port Profile   |                          | `LAN-vpngate-local (40)` | `LAN-vpngate-local (40)` | `LAN-vpngate-local (40)` |
-| Profile Overrides     |                          | Leave Default            | Leave Default            | Leave Default            |
-
-Shown below is a sample of a 6x LAN port configuration.
-
-![unifi_ports_01](README.assets/unifi_ports_01.png)
-
-### 3.3.4. Setup network WiFi SSiDs for the VPN service - pfSense
-
-We have two VPN VLAN's so we can create 2x new WiFI SSIDs. All traffic on these WiFi connections will exit encrypted to the internet via your preset VPN VLAN (30 or 40). The following instructions are for the UniFi controller `Settings` > `Wireless Networks` > `Create New Wireless Network` and fill out the form details as shown below:
-
-| Description    | Value                     | Value                     |
-|----------------|---------------------------|---------------------------|
-| Name/SSID      | **`hello-vpngate-world`** | **`hello-vpngate-local`** |
-| Enabled        | `☑`                       | `☑`                       |
-| Security       | `WPA Personal`            | `WPA Personal`            |
-| Security Key   | Enter a password          | Enter a password          |
-| VLAN           | `30`                      | `40`                      |
-| Other Settings | Leave as default          | Leave as default          |
-
-### 3.3.5. Edit your UniFi network firewall - pfSense
-
-This section is a little confusing. I try my best.
-
-The pfSense VM is a fully functional independent OS with its own virtual networking. This pfSense virtual networking connects via bridges to your PVE-01 host computer PVE Linux Bridges (vmbr0, vmbr2,vmbr30, and optional vmbr40). In summary it's from one *bridge* to another *bridge*.
-
-On the creation of your PVE pfSense VM, you will create a PVE VirtIO (paravirtualized) network device inside the VM. Each pfSense VM Virtio device is bridged to a PVE Linux Bridge (i.e. vmbr0 etc). Your pfSense PVE VM hardware configuration, subject to your host's networking capabilities, will resemble the following table:
-
-| pfSense Network Device ID    | Settings                                          |
-|------------------------------|---------------------------------------------------|
-| <> Network Device (net0)     | virtio=3A:13:29:66:31:35,bridge=vmbr0,firewall=1  |
-| <> Network Device (net1)     | virtio=1A:14:AH:3B:7B:35,bridge=vmbr2,firewall=1  |
-| <> Network Device (net2)     | virtio=9E:3F:F9:5A:77:D1,bridge=vmbr30,firewall=1 |
-| *Optional 4x LAN NIC below:* |                                                   |
-| <> Network Device (net3)     | virtio=12:79:A0:1F:2C:8A,bridge=vmbr40,firewall=1 |
-
-So when you configure and setup pfSense your pfSense Interfaces Assignments in the pfSense web management frontend will show:
-
-| pfSense Interface                 | Network port               |
-|-----------------------------------|----------------------------|
-| LAN                               | vtnet0 (3A:13:29:66:31:35) |
-| WAN ( *i.e VLAN2* )               | vtnet1 (1A:14:AH:3B:7B:35) |
-| OPT1 ( *i.e Gateway for VLAN30* ) | vtnet2 (9E:3F:F9:5A:77:D1) |
-| *Optional 4x LAN NIC below:*      |                            |
-| OPT2 ( *i.e Gateway for VLAN40* ) | vtnet3 (12:79:A0:1F:2C:8A) |
-
-When you install pfSense on host PVE-01 you must be assigned a LAN, WAN and your VPN gateway interfaces. Make sure the PVE VM Virtio MAC address corresponds with PVE Linux Bridge vmbr(x) ad is correctly assigned to the pfSense vtnet(x) assignments.
-
-The pfSense WAN interface must be VLAN2 which is labeled in your UniFi controller (switch) as `VPN-egress`. Because it's configured with network `Guest security policies` in the UniFi controller it has no access to other network VLANs. The reason for this is explained build recipe for `VPN-egress` shown [here](#332-create-network-switch-vlans---pfsense).
-
-For HAProxy to work you must authorize UniFi VLAN2 (WAN in pfSense addon service HAProxy) to have access to your Proxmox LXCs, CTs or VMs static container IPv4 addresses. These instructions are for a UniFi controller `Settings` > `Guest Control`  and look under the `Access Control` section. Under `Pre-Authorization Access` click`**+** Add IPv4 Hostname or subnet` to add the following IPv4 addresses to authorize access for VLAN2 clients. Fill out the form details as shown below:
-
-| \+ Add IPv4 Hostname or subnet | By Hostname (recommended) | By IP          | Description         |
-|--------------------------------|---------------------------|----------------|---------------------|
-| IPv4                           | jellyfin.local            | 192.168.50.111 | *Jellyfin Server*   |
-| IPv4                           | nzbget.local              | 192.168.30.112 | *Nzbget Server*     |
-| IPv4                           | deluge.local              | 192.168.30.113 | *Deluge Server*     |
-| IPv4                           | flexget.local             | 192.168.50.114 | *Flexget Server*    |
-| IPv4                           | sonarr.local              | 192.168.50.115 | *Sonarr Server*     |
-| IPv4                           | radarr.local              | 192.168.50.116 | *Radarr Server*     |
-| IPv4                           | lidarr.local              | 192.168.50.117 | *Lidarr Server*     |
-| IPv4                           | ahuabooks.local           | 192.168.50.118 | *Ahuabooks Server*  |
-| IPv4                           | ombi.local                | 192.168.50.119 | *Ombi Server*       |
-| IPv4                           | jackett.local             | 192.168.50.120 | *Jackett Server*    |
-| IPv4                           | kodirsync.local           | 192.168.50.121 | *Kodi-rsync Server* |
-| IPv4                           | vidcoderr.local           | 192.168.80.122 | *Vidcoder Server*   |
-| IPv4                           | ahuabooks.local           |                | *Ahuabooks Server*  |
-
-And click `Apply Changes`.
-
-As you've probably concluded you must add all new HAProxy backend server IPv4 address(s) to the UniFi Pre-Authorization Access list for HAProxy frontend to have access to these servers.
-
-
-# 4. PVE Host Toolbox
-
-Our Easy Script Toolbox will configure and ready your PVE hosts to support Ahuacate CTs or VMs. Each Toolbox script will create, modify and change system settings including:
+Frontend management and NAS services are by a our own PVE Ubuntu CT (hostname label NAS-01). NAS-01 fully supports SMB3, NFSv4.1 and ACL services. A detailed guide with build options is available [here](https://github.com/ahuacate/pve-nas).
+
+<hr>
+
+# 5. PVE Easy Script Toolbox
+
+Our Easy Script Toolbox will configure your PVE hosts to support Ahuacate CTs and VMs. Each Toolbox script will create, modify and change system settings including:
 
 1. PVE Basic - required by all PVE hosts (mandatory / required)
     - Update Proxmox
     - Check and set Proxmox subscription key (free or enterprise)
     - Install nbtscan SW
     - Adjust sysctl parameters
-    - Perform PVE container (CT) mapping
-2. PVE Full Build - run all toolbox add-ons
+    - Set PVE container (CT) mapping
+    - Set '/etc/vzdump.conf' variable to `tmpdir: /tmp`
 3. PVESM NFS Storage - add additional NFS PVE storage mounts
 4. PVESM SMB/CIFS Storage - add additional SMB/CIFS storage mounts
 5. PVE Hostname Updater - change the hostname of a node
-6. PVE Network Updater - change a hosts network configuration
-7. Fail2Ban Installer
-8. SSMTP Email Installer
-9. SSH Key Installer -  add or create your own private SSH access key
+6. Fail2Ban Installer
+7. SMTP Email Setup
+8. PVE CT updater
+
 
 The available options vary between PVE primary and secondary hosts.
 
-### 4.0.6. SMTP Server Credentials
-
-You will have the option to install an SSMTP Email server. SSMTP is Mail Transfer Agent (MTA) used to send email alerts about your machines like details about new user accounts, unwarranted login attempts, and system critical alerts to the system's designated administrator.
-
-You will be asked for the credentials of an SMTP Server. You can use Gmail, GoDaddy, AWS, or any SMTP server credentials (i.e address, port, username and password, encryption type etc.
-
-But we recommend you create an account at mailgun.com to relay your NAS system emails to your designated administrator. With mailgun you are not potentially exposing your private email server credentials held within a text file on your PVE host. This is an added layer of security.
-
-## 4.1. Run our PVE Host Toolbox Easy Script
+## 5.1. Run our PVE Host Toolbox Easy Script
 
 To execute SSH into your PVE host ( i.e. `ssh root@192.168.1.101` ) or use the Proxmox web interface CLI shell `pve-0x` > `>_ Shell` and cut & paste the following into the CLI terminal window and press ENTER:
 
 ```bash
 bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/pve_host_setup_toolbox.sh)"
 ```
+## 5.2. PVE Basic
 
-> We recommended you establish an SSH connection from a computer CLI terminal or with an application like Putty (a free SSH and telnet client for Windows) https://www.putty.org instead of using the Proxmox web interface CLI shell.
+You must run this script on all primary and secondary hosts before deployment.
 
-# 5. Other PVE Host Stuff
+## 5.3. PVESM NFS Storage
 
-## 5.1. Create a PVE Cluster
+Add NFS storage mounts which are required by our suite of CT and VM applications. You must have the following NAS exports including linux share permissions as shown [here](https://github.com/ahuacate/common/blob/master/nas/src/nas_basefolderlist).
+
+Read about your [HARDMETAL NAS](https://github.com/ahuacate/nas-hardmetal) and [PVE-NAS](https://github.com/ahuacate/pve-nas) build and configure options.
+
+You may combine NFS and CIFS storage mounts on your PVE primary host. I use NFS only.
+
+## 5.4. PVESM SMB/CIFS Storage
+
+Add SMB/CIFS storage mounts which are required by our suite of CT and VM applications. You must have the following NAS exports including linux share permissions as shown [here](https://github.com/ahuacate/common/blob/master/nas/src/nas_basefolderlist).
+
+Read about your [HARDMETAL NAS](https://github.com/ahuacate/nas-hardmetal) and [PVE-NAS](https://github.com/ahuacate/pve-nas) build and configure options.
+
+You may combine NFS and CIFS storage mounts on your PVE primary host. I use NFS only.
+
+## 5.5. PVE Hostname Updater
+
+Change or edit your PVE node hostname.
+
+## 5.6. Fail2Ban Installer
+
+Fail2Ban is an intrusion prevention software framework that protects computer servers from brute-force attacks.
+
+Most commonly this is used to block selected IP addresses that may belong to hosts that are trying to breach the systems security. It can ban any host IP address that makes too many login attempts or performs any other unwanted action within a time frame defined by the PVE administrator.
+
+Our default Fail2ban configuration sets the following rule sets:
+
+*   **PVE WEBGUI HTTP(S) ACCESS**
+    Maximum HTTP retry 3 attempts.
+    PVE HTTP(S) ban time is 1 hour.
+    If your PVE Postfix SMTP server is configured then Fail2ban will send send email alerts.
+
+*   **PVE EMAIL ALERTS**
+    Send email alerts of banned login attempts. (requires working PVE Postfix SMTP server)
+
+## 5.7. SMTP Server Credentials (Recommended)
+You have the option to configure a Postfix SMTP Email server. SMTP is Mail Transfer Agent (MTA) used to send email alerts about your machines like details about new user accounts, unwarranted login attempts, and system critical alerts to the system's designated administrator. The SMTP server is required for any PVE CT or VM which requires a email service.
+
+You will be asked for the credentials of your SMTP Server. You can use Gmail, GoDaddy, AWS, Microsoft or any SMTP server credentials (i.e address, port, username and password, encryption type etc.
+
+But we recommend you create an account at mailgun.com to relay your NAS system emails to your designated administrator. With MailGun you are not potentially exposing your private email server credentials held within a text file on your PVE host. This is an added layer of security.
+
+## 5.8. PVE CT updater
+
+The script performs an OS update on all PVE CTs. All CTs are returned to their former run state in the background before moving on to CT.
+
+<hr>
+
+# 6. Create a PVE Cluster
 
 Proxmox requires a minimum of three PVE hosts on the same network to form a cluster - PVE-01, PVE-02 and PVE-03.
 
-### 5.1.1. Create a Cluster
+
+## 6.1. Create a Cluster
 
 Using the PVE web interface on host PVE-01, go to `Datacenter` > `Cluster` > `Create Cluster` and fill out the fields as follows:
 
@@ -517,7 +457,7 @@ Using the PVE web interface on host PVE-01, go to `Datacenter` > `Cluster` > `Cr
 
 And Click `Create`.
 
-### 5.1.2. Join the other Nodes to the New Cluster
+## 6.2. Join the other Nodes to the New Cluster
 
 The first step in joining other nodes to your cluster, `pve-cluster`, is to copy PVE-01 cluster manager fingerprint/join information into your clipboard.
 
@@ -562,7 +502,7 @@ Membership information
 0x00000003          1 192.168.1.103
 ```
 
-### 5.1.3. How to delete an existing cluster on a node
+## 6.3. How to delete an existing cluster on a node
 
 If you make a mistake when setting up your cluster the following should reset your cluster settings to the PVE default.
 
@@ -581,10 +521,3 @@ systemctl restart pvestatd
 reboot
 ```
 <hr>
-
-# 6. Maintenance Tools
-
-## 6.1. Toolbox Updater for all CTs OS
-The script performs an OS update on all PVE CTs. All CTs are returned to their former run state in the background before moving on to CT.
-
-To run the Updater run the Toolbox.

@@ -13,12 +13,8 @@
 SECTION_HEAD='PVE Host Fail2Ban'
 
 
-# Check Ahuacate Check variables
-if [[ $(cat /etc/postfix/main.cf | grep "### Ahuacate_Check=0.*") ]]; then
-  SMTP_STATUS=0
-elif [[ ! $(cat /etc/postfix/main.cf | grep "### Ahuacate_Check=0.*") ]]; then
-  SMTP_STATUS=1
-fi
+# Run SMTP check
+check_smtp_status
 
 # Check for PVE Hostname mod
 if [ -z "${HOSTNAME_FIX+x}" ]; then
@@ -92,7 +88,7 @@ section "Configuring Fail2ban"
 # Checking Postfix SMTP Status
 msg "Checking PVE host SMTP email server status for sending Fail2ban alerts..."
 EMAIL_RECIPIENT=$(pveum user list | awk -F " │ " '$1 ~ /root@pam/' | awk -F " │ " '{ print $3 }')
-if [ ${SMTP_STATUS} == '0' ]; then
+if [ ${SMTP_STATUS} == '1' ]; then
   while true; do
     read -p "Enable Fail2ban email alerts [y/n]?: " -n 1 -r YN
     echo
@@ -115,7 +111,7 @@ if [ ${SMTP_STATUS} == '0' ]; then
         ;;
     esac
   done
-elif [ ${SMTP_STATUS} == '1' ]; then
+elif [ ${SMTP_STATUS} == '0' ]; then
   msg "We cannot determine if the PVE hosts Postfix email server works."
   while true; do
     read -p "Is the PVE host Postfix email server configured and working [y/n]?: " -n 1 -r YN
@@ -127,7 +123,7 @@ elif [ ${SMTP_STATUS} == '1' ]; then
           echo
           case $YN in
             [Yy]*)
-              SMTP_STATUS=0
+              SMTP_STATUS=1
               info "The User set to receive Fail2ban alerts by email.\nAll alerts will be sent to: ${YELLOW}${EMAIL_RECIPIENT}${NC}"
               F2B_EMAIL_ALERTS=0
               echo
@@ -207,6 +203,6 @@ fi
 
 #---- Finish Line ------------------------------------------------------------------
 
-section "Completion Status."
+section "Completion Status"
 msg "Success. Task complete."
 echo

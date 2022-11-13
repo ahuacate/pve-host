@@ -15,12 +15,8 @@
 # Easy Script Section Header Body Text
 SECTION_HEAD='PVE Host SSH Keys'
 
-# Check Ahuacate Check variables
-if [[ $(cat /etc/postfix/main.cf | grep "### Ahuacate_Check=0.*") ]]; then
-  SMTP_STATUS=0
-elif [[ ! $(cat /etc/postfix/main.cf | grep "### Ahuacate_Check=0.*") ]]; then
-  SMTP_STATUS=1
-fi
+# Check PVE SMTP status
+check_smtp_status
 
 # Check for PVE Hostname mod
 if [ -z "${HOSTNAME_FIX+x}" ]; then
@@ -40,7 +36,7 @@ PVE System Administrators should use SSH keys to access PVE root accounts over S
 
 1. Append or add an existing SSH Public Key to PVE hosts authorized keys file.
 
-2. Generate a a new set of SSH key pairs. If the User chooses to append a existing SSH Public Key to the PVE host you will be prompted to paste the SSH Public Key into this terminal console. Use your mouse right-click to paste."
+2. Generate a new set of SSH key pairs. If the User chooses to append a existing SSH Public Key to the PVE host you will be prompted to paste the SSH Public Key into this terminal console. Use your mouse right-click to paste."
 echo
 while true; do
   read -p "Configure this PVE host for SSH key access [y/n]?: " -n 1 -r YN
@@ -275,6 +271,6 @@ fi
 
 #---- Finish Line ------------------------------------------------------------------
 
-section "Completion Status."
+section "Completion Status"
 msg "Success. Task complete."
 echo

@@ -150,9 +150,10 @@ else
   echo
 fi
 
-#---- Setting PVE Postfix Variables
+#---- Setting PVE Postfix SMTP server vars
+
 while true; do
-  section "Setting Postfix Variables"
+  section "Setting Postfix SMTP variables"
 
   # VAR for the script
   POSTFIX_CONFIG=/etc/postfix/main.cf

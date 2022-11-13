@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # ----------------------------------------------------------------------------------
-# Filename:     pve_host_setup_toolbox.sh
+# Filename:     pve_host_toolbox.sh
 # Description:  Installer toolbox for Proxmox host setup and configuration
 # ----------------------------------------------------------------------------------
 
 #---- Bash command to run script ---------------------------------------------------
 
 #---- Source Github
-# bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/pve_host_setup_toolbox.sh)"
+# bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/pve_host_toolbox.sh)"
 
 #---- Source local Git
-# /mnt/pve/nas-01-git/ahuacate/pve-host-setup/pve_host_setup_toolbox.sh
+# /mnt/pve/nas-01-git/ahuacate/pve-host-setup/pve_host_toolbox.sh
 
 #---- Source -----------------------------------------------------------------------
 
@@ -57,6 +57,10 @@ GIT_APP_SCRIPT='pve_host_setup.sh'
 REPO_TEMP='/tmp'
 cd ${REPO_TEMP}
 
+#---- Local Repo path (check if local)
+# For local SRC a 'developer_settings.git' file must exist in repo dir (value: dev_git_mount=0)
+REPO_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P | sed "s/${GIT_USER}.*/${GIT_USER}/" )"
+
 #---- Other Variables --------------------------------------------------------------
 
 # Easy Script Section Header Body Text
@@ -65,9 +69,9 @@ SECTION_HEAD='PVE Host Toolbox'
 #---- Other Files ------------------------------------------------------------------
 
 #---- Package loader
-if [ -f /mnt/pve/nas-*[0-9]-git/${GIT_USER}/developer_settings.git ] && [ -f /mnt/pve/nas-*[0-9]-git/${GIT_USER}/${GIT_REPO}/common/bash/src/pve_repo_loader.sh ]; then
-  # Developer Options loader
-  source /mnt/pve/nas-*[0-9]-git/${GIT_USER}/${GIT_REPO}/common/bash/src/pve_repo_loader.sh
+if [ -f ${REPO_PATH}/common/bash/src/pve_repo_loader.sh ] && [[ $(sed -n 's/^dev_git_mount=//p' ${REPO_PATH}/developer_settings.git 2> /dev/null) == '0' ]]; then
+  # Download Local loader (developer)
+  source ${REPO_PATH}/common/bash/src/pve_repo_loader.sh
 else
   # Download Github loader
   wget -qL - https://raw.githubusercontent.com/${GIT_USER}/common/master/bash/src/pve_repo_loader.sh -O ${REPO_TEMP}/pve_repo_loader.sh
@@ -79,6 +83,9 @@ fi
 
 #---- Run Bash Header
 source ${COMMON_PVE_SRC_DIR}/pvesource_bash_defaults.sh
+
+# Check PVE SMTP status
+check_smtp_status
 
 #---- Identify PVE Host Type
 section "Set PVE host type"
@@ -107,7 +114,8 @@ We need to determine the type of PVE host being built or updated. There are two 
 
 # Set PVE Build Type
 OPTIONS_VALUES_INPUT=( "TYPE01" "TYPE02" )
-OPTIONS_LABELS_INPUT=( "Primary - Primary PVE host" "Secondary - Secondary PVE host (cluster node)" )
+OPTIONS_LABELS_INPUT=( "Primary - Primary PVE host" \
+"Secondary - Secondary PVE host (cluster node)" )
 makeselect_input2
 singleselect SELECTED "$OPTIONS_STRING"
 if [ ${RESULTS} == 'TYPE01' ]; then
@@ -125,23 +133,23 @@ while true; do
   msg_box "The User must select a task to perform. 'PVE Host Basic' is mandatory or required for all hosts. 'PVE Full Build' includes the full suite of Toolbox add-on options.\n\nSelect a Toolbox task or 'None. Exit this installer' to leave."
   echo
   warn_msg="Only primary PVE hosts can run this add-on task.\nRun another task or select 'None. Exit this installer'. Try again..."
-  OPTIONS_VALUES_INPUT=( "TYPE01" "TYPE02" "TYPE03" "TYPE04" "TYPE05" "TYPE06" "TYPE07" "TYPE08" "TYPE09" "TYPE10" "TYPE00" )
-  OPTIONS_LABELS_INPUT=( "PVE Basic - required by all hosts (mandatory)" "PVE Full Build - run all toolbox tasks" "PVESM NFS Storage - add NFS PVE storage mounts" "PVESM SMB/CIFS Storage - add SMB/CIFS storage mounts" "PVE Hostname Updater - change a hosts hostname" "PVE Network Updater - change a hosts network configuration" "Fail2Ban Installer $(if [ $(dpkg -s fail2ban >/dev/null 2>&1; echo $?) = 0 ]; then echo "( installed & active )"; else echo "(not installed)"; fi)" "SSMTP Email Installer $(if [ $(dpkg -s ssmtp >/dev/null 2>&1; echo $?) = 0 ] && [ $(grep -qs "^root:*" /etc/ssmtp/revaliases >/dev/null; echo $?) = 0 ]; then echo "( installed & active )"; else echo "(not installed)"; fi)" "SSH Key Installer -  add or create your own private SSH access key" "PVE CT updater - mass update all CT OS" "None. Exit this installer" )
+  OPTIONS_VALUES_INPUT=( "TYPE01" "TYPE02" "TYPE03" "TYPE04" "TYPE05" "TYPE06" "TYPE07" "TYPE00" )
+  OPTIONS_LABELS_INPUT=( "PVE Basic - required by all hosts (mandatory)" \
+  "PVESM NFS Storage - add NFS PVE storage mounts" \
+  "PVESM SMB/CIFS Storage - add SMB/CIFS storage mounts" \
+  "PVE Hostname Updater - change a hosts hostname" \
+  "Fail2Ban Installer $(if [ $(dpkg -s fail2ban >/dev/null 2>&1; echo $?) = 0 ]; then echo "( installed & active )"; else echo "(not installed)"; fi)" \
+  "SMTP Email Setup $(if [ "${SMTP_STATUS}" == 1 ]; then echo "( installed & active )"; else echo "(not installed)"; fi)" \
+  "PVE CT updater - mass update all CT OS" \
+  "None. Exit this installer" )
   makeselect_input2
   singleselect SELECTED "$OPTIONS_STRING"
 
   if [ ${RESULTS} == 'TYPE01' ]; then
     #---- Configure PVE host - basic
     source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_basic.sh
+
   elif [ ${RESULTS} == 'TYPE02' ]; then
-    #---- Configure PVE host - full build
-    if [ ${PVE_TYPE} == '1' ]; then
-      source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_fullbuild.sh
-    else
-      warn "${warn_msg}"
-      echo
-    fi
-  elif [ ${RESULTS} == 'TYPE03' ]; then
     #---- Create PVE Storage mounts (NFS)
     if [ ${PVE_TYPE} == '1' ]; then
       source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_add_nfs_mounts.sh
@@ -149,7 +157,7 @@ while true; do
       warn "${warn_msg}"
       echo
     fi
-  elif [ ${RESULTS} == 'TYPE04' ]; then
+  elif [ ${RESULTS} == 'TYPE03' ]; then
     #---- Create PVE Storage mounts (CIFS)
     if [ ${PVE_TYPE} == '1' ]; then
       source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_add_cifs_mounts.sh
@@ -157,33 +165,17 @@ while true; do
       warn "${warn_msg}"
       echo
     fi
-  elif [ ${RESULTS} == 'TYPE05' ]; then
+  elif [ ${RESULTS} == 'TYPE04' ]; then
     #---- PVE Hostname edit
     source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_hostname.sh
     source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_hostnameupdate.sh
-  elif [ ${RESULTS} == 'TYPE06' ]; then
-    #---- PVE Network edit
-    source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_network.sh
-  elif [ ${RESULTS} == 'TYPE07' ]; then
+  elif [ ${RESULTS} == 'TYPE05' ]; then
     #---- Install and Configure Fail2ban
     source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_fail2ban.sh
-  elif [ ${RESULTS} == 'TYPE08' ]; then
+  elif [ ${RESULTS} == 'TYPE06' ]; then
     #---- Configure Email Alerts
-    if [ ${PVE_TYPE} == '1' ]; then
-      source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_postfix.sh
-    else
-      warn "${warn_msg}"
-      echo
-    fi
-  elif [ ${RESULTS} == 'TYPE09' ]; then
-    #---- Configure SSH key
-    if [ ${PVE_TYPE} == '1' ]; then
-      source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_sshkey.sh
-    else
-      warn "${warn_msg}"
-      echo
-    fi
-  elif [ ${RESULTS} == 'TYPE10' ]; then
+    source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_postfix_server.sh
+  elif [ ${RESULTS} == 'TYPE07' ]; then
     #---- PVE CT Updater
     if [ ${PVE_TYPE} == '1' ]; then
       source ${REPO_TEMP}/${GIT_REPO}/src/pvetool_ct_updater.sh
@@ -205,7 +197,7 @@ done
 
 #---- Finish Line ------------------------------------------------------------------
 
-section "Completion Status."
+section "Completion Status"
 
 msg "Success. Task complete."
 echo
