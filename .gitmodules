@@ -1,4 +1,4 @@
 [submodule "common"]
 	path = common
 	url = https://github.com/ahuacate/common.git
-	branch = master
+	branch = main

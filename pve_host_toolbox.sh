@@ -2,15 +2,16 @@
 # ----------------------------------------------------------------------------------
 # Filename:     pve_host_toolbox.sh
 # Description:  Installer toolbox for Proxmox host setup and configuration
-# ----------------------------------------------------------------------------------
+# Note:         Custom installer script (do not update with default installer)
+#----------------------------------------------------------------------------------
 
 #---- Bash command to run script ---------------------------------------------------
 
 #---- Source Github
-# bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/pve_host_toolbox.sh)"
+# bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host/main/pve_host_toolbox.sh)"
 
 #---- Source local Git
-# /mnt/pve/nas-01-git/ahuacate/pve-host-setup/pve_host_toolbox.sh
+# /mnt/pve/nas-01-git/ahuacate/pve-host/pve_host_toolbox.sh
 
 #---- Source -----------------------------------------------------------------------
 
@@ -45,13 +46,11 @@ GIT_SERVER='https://github.com'
 # Git user
 GIT_USER='ahuacate'
 # Git repository
-GIT_REPO='pve-host-setup'
+GIT_REPO='pve-host'
 # Git branch
-GIT_BRANCH='master'
+GIT_BRANCH='main'
 # Git common
 GIT_COMMON='0'
-# Installer App script
-GIT_APP_SCRIPT='pve_host_setup.sh'
 
 # Set Package Installer Temp Folder
 REPO_TEMP='/tmp'
@@ -74,7 +73,7 @@ if [ -f ${REPO_PATH}/common/bash/src/pve_repo_loader.sh ] && [[ $(sed -n 's/^dev
   source ${REPO_PATH}/common/bash/src/pve_repo_loader.sh
 else
   # Download Github loader
-  wget -qL - https://raw.githubusercontent.com/${GIT_USER}/common/master/bash/src/pve_repo_loader.sh -O ${REPO_TEMP}/pve_repo_loader.sh
+  wget -qL - https://raw.githubusercontent.com/${GIT_USER}/common/main/bash/src/pve_repo_loader.sh -O ${REPO_TEMP}/pve_repo_loader.sh
   chmod +x ${REPO_TEMP}/pve_repo_loader.sh
   source ${REPO_TEMP}/pve_repo_loader.sh
 fi
@@ -139,7 +138,7 @@ while true; do
   "PVESM SMB/CIFS Storage - add SMB/CIFS storage mounts" \
   "PVE Hostname Updater - change a hosts hostname" \
   "Fail2Ban Installer $(if [ $(dpkg -s fail2ban >/dev/null 2>&1; echo $?) = 0 ]; then echo "( installed & active )"; else echo "(not installed)"; fi)" \
-  "SMTP Email Setup $(if [ "${SMTP_STATUS}" == 1 ]; then echo "( installed & active )"; else echo "(not installed)"; fi)" \
+  "SMTP Email Server Setup $(if [ "${SMTP_STATUS}" == 1 ]; then echo "( installed & active )"; else echo "(not installed)"; fi)" \
   "PVE CT updater - mass update all CT OS" \
   "None. Exit this installer" )
   makeselect_input2
@@ -197,14 +196,6 @@ done
 
 #---- Finish Line ------------------------------------------------------------------
 
-section "Completion Status"
-
-msg "Success. Task complete."
-echo
-
 # Cleanup
-# # Clean up CT tmp files
-# pct exec $CTID -- bash -c "rm -R /tmp/${GIT_REPO} &> /dev/null; rm /tmp/${GIT_REPO}.tar.gz &> /dev/null"
-# Clean up pve host
 installer_cleanup
-trap cleanup EXIT
+#-----------------------------------------------------------------------------------

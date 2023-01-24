@@ -6,7 +6,7 @@
 
 #---- Bash command to run script ---------------------------------------------------
 
-# bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_postfix.sh)"
+# bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host/main/scripts/pve_host_setup_postfix.sh)"
 
 #---- Source -----------------------------------------------------------------------
 #---- Dependencies -----------------------------------------------------------------

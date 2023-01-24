@@ -6,7 +6,7 @@
 
 #---- Bash command to run script ---------------------------------------------------
 
-# bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/scripts/pve_host_setup_postfix_server.sh)"
+# bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host/main/scripts/pve_host_setup_postfix_server.sh)"
 
 #---- Source -----------------------------------------------------------------------
 #---- Dependencies -----------------------------------------------------------------
@@ -486,6 +486,20 @@ postconf -e smtpd_client_restrictions='permit_mynetworks, reject'
 # Stop Spambots - restrict the use of the mail relay to your local network and the SASL-authorized users.
 postconf -e smtpd_relay_restrictions='permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination'
 
+# Enable Postfix Virtual Domain Aliases for PVE CT programs to send email to root/postmaster
+# Alias 'vmclient.alias@virtual-alias.domain' is used to send a CC copy of App mail
+# to the system administrator. 
+touch /etc/postfix/virtual || exit
+# Check if the line exists in the file
+if ! grep -q 'vmclient.alias@virtual-alias.domain postmaster' /etc/postfix/virtual; then
+  # If the line does not exist, add it to the file
+  echo 'vmclient.alias@virtual-alias.domain postmaster' >> /etc/postfix/virtual
+fi
+# Enable 'Virtual Domain Aliases' in Postfix /etc/postfix/main.cf
+postconf -e 'virtual_alias_domains = virtual-alias.domain'
+postconf -e 'virtual_alias_maps = hash:/etc/postfix/virtual'
+# Update Postfix Aliases
+postmap /etc/postfix/virtual
 
 # Customized Email header
 echo /^From:.*/ REPLACE From: "$(hostname)-alert" '<'$(echo ${PVE_ROOT_EMAIL} | sed 's/@.*//')@$(hostname).$(hostname -d)'>' > /etc/postfix/smtp_header_checks
@@ -504,3 +518,4 @@ systemctl restart postfix.service
 section "Completion Status"
 msg "Success. Task complete."
 echo
+#-----------------------------------------------------------------------------------

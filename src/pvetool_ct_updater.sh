@@ -8,7 +8,7 @@
 
 #---- Bash command to run script ---------------------------------------------------
 
-#bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/common/master/pve/tool/pvetool_ct_updater.sh)"
+#bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/common/main/pve/tool/pvetool_ct_updater.sh)"
 
 #---- Source -----------------------------------------------------------------------
 #---- Dependencies -----------------------------------------------------------------

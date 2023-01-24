@@ -1,6 +1,6 @@
 <H1>PVE Host Setup</H1>
 
-This guide is for configuring Proxmox hosts.
+This guide is for configuring Proxmox hosts only.
 
 Included are step-by-step instructions and an Easy Script Toolbox to automate much of the work. On completion, your new PVE host is configured to support all Ahuacate CTs and VMs.
 
@@ -67,7 +67,7 @@ Before running the Easy Script Toolbox first configure your Proxmox hosts networ
 SSH login to your PVE host `ssh root@IP_address`. Then run the following command.
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/pve_host_toolbox.sh)"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host/master/pve_host_toolbox.sh)"
 ```
 
 <hr>
@@ -386,7 +386,7 @@ The available options vary between PVE primary and secondary hosts.
 To execute SSH into your PVE host ( i.e. `ssh root@192.168.1.101` ) or use the Proxmox web interface CLI shell `pve-0x` > `>_ Shell` and cut & paste the following into the CLI terminal window and press ENTER:
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host-setup/master/pve_host_setup_toolbox.sh)"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host/master/pve_host_setup_toolbox.sh)"
 ```
 ## 5.2. PVE Basic
 
