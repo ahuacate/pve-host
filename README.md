@@ -50,7 +50,7 @@ Optional information required running specific Easy Script Toolbox add-ons.
 
 <h2>Local DNS Records</h2>
 
-We recommend <span style="color:red">you read</span> about network Local DNS and why a PiHole server is a necessity. Click <a href="https://github.com/ahuacate/common/tree/master/pve/src/local_dns_records.md" target="_blank">here</a> to learn more before proceeding any further.
+We recommend <span style="color:red">you read</span> about network Local DNS and why a PiHole server is a necessity. Click <a href="https://github.com/ahuacate/common/tree/main/pve/src/local_dns_records.md" target="_blank">here</a> to learn more before proceeding any further.
 
 Your network Local Domain or Search domain must be also set. We recommend only top-level domain (spTLD) names for residential and small networks names because they cannot be resolved across the internet. Routers and DNS servers know, in theory, not to forward ARPA requests they do not understand onto the public internet. It is best to choose one of our listed names: local, home.arpa, localdomain or lan only. Do NOT use made-up names.
 
@@ -67,7 +67,7 @@ Before running the Easy Script Toolbox first configure your Proxmox hosts networ
 SSH login to your PVE host `ssh root@IP_address`. Then run the following command.
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host/master/pve_host_toolbox.sh)"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host/main/pve_host_toolbox.sh)"
 ```
 
 <hr>
@@ -386,7 +386,7 @@ The available options vary between PVE primary and secondary hosts.
 To execute SSH into your PVE host ( i.e. `ssh root@192.168.1.101` ) or use the Proxmox web interface CLI shell `pve-0x` > `>_ Shell` and cut & paste the following into the CLI terminal window and press ENTER:
 
 ```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host/master/pve_host_setup_toolbox.sh)"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host/main/pve_host_setup_toolbox.sh)"
 ```
 ## 5.2. PVE Basic
 
@@ -394,7 +394,7 @@ You must run this script on all primary and secondary hosts before deployment.
 
 ## 5.3. PVESM NFS Storage
 
-Add NFS storage mounts which are required by our suite of CT and VM applications. You must have the following NAS exports including linux share permissions as shown [here](https://github.com/ahuacate/common/blob/master/nas/src/nas_basefolderlist).
+Add NFS storage mounts which are required by our suite of CT and VM applications. You must have the following NAS exports including linux share permissions as shown [here](https://github.com/ahuacate/common/blob/main/nas/src/nas_basefolderlist).
 
 Read about your [HARDMETAL NAS](https://github.com/ahuacate/nas-hardmetal) and [PVE-NAS](https://github.com/ahuacate/pve-nas) build and configure options.
 
@@ -402,7 +402,7 @@ You may combine NFS and CIFS storage mounts on your PVE primary host. I use NFS 
 
 ## 5.4. PVESM SMB/CIFS Storage
 
-Add SMB/CIFS storage mounts which are required by our suite of CT and VM applications. You must have the following NAS exports including linux share permissions as shown [here](https://github.com/ahuacate/common/blob/master/nas/src/nas_basefolderlist).
+Add SMB/CIFS storage mounts which are required by our suite of CT and VM applications. You must have the following NAS exports including linux share permissions as shown [here](https://github.com/ahuacate/common/blob/main/nas/src/nas_basefolderlist).
 
 Read about your [HARDMETAL NAS](https://github.com/ahuacate/nas-hardmetal) and [PVE-NAS](https://github.com/ahuacate/pve-nas) build and configure options.
 
