@@ -1,8 +1,8 @@
 <H1>PVE Host Setup</H1>
 
-This guide is for configuring Proxmox hosts only.
+This guide is for configuring your Proxmox hosts. You must follow this guide to build a reliable Proxmox host configured to support our suite of LXC and VM applications.
 
-Included are step-by-step instructions and an Easy Script Toolbox to automate much of the work. On completion, your new PVE host is configured to support all Ahuacate CTs and VMs.
+Included are step-by-step instructions and an Easy Script Toolbox to automate much of the work.
 
 The East Script Toolbox add-on "PVE Basic" must be run on all PVE hosts (primary and secondary). "PVE Basic" includes <span style="color:red">critical PVE Container UID & GID mapping required by all Ahuacate CTs and VMs</span> resolving permission rights for bind-mounted shared data.
 
