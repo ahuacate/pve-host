@@ -7,9 +7,6 @@
 #---- Bash command to run script ---------------------------------------------------
 #---- Source -----------------------------------------------------------------------
 #---- Dependencies -----------------------------------------------------------------
-# First update
-apt-get update -y > /dev/null
-
 #---- Static Variables -------------------------------------------------------------
 
 # Easy Script Section Header Body Text
@@ -18,6 +15,20 @@ SECTION_HEAD='PVE Host Basic Setup'
 #---- Other Variables --------------------------------------------------------------
 #---- Other Files ------------------------------------------------------------------
 #---- Body -------------------------------------------------------------------------
+
+#---- Prerequisites
+
+# First update
+apt-get update -y > /dev/null
+
+# nbtscan SW
+if [[ ! $(dpkg -s nbtscan) ]]
+then
+  msg "Installing nbtscan..."
+  apt-get install -y nbtscan >/dev/null
+  info "nbtscan status: ${GREEN}active${NC}"
+  echo
+fi
 
 #---- Introduction
 section "Introduction"
@@ -32,7 +43,8 @@ This setup script is for configuring 'new' PVE hosts only. Tasks to be performed
   --  Adjust sysctl parameters
   --  Perform PVE container (CT) mapping ( required for all our PVE VM or CT builds )"
 echo
-while true; do
+while true
+do
   read -p "Perform PVE host basic tuning ( Recommended ) [y/n]?: " -n 1 -r YN
   echo
   case $YN in
@@ -66,31 +78,37 @@ if [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper
   makeselect_input2
   singleselect SELECTED "$OPTIONS_STRING"
 
-  if [ ${RESULTS} == 'TYPE01' ]; then
+  if [ "$RESULTS" = 'TYPE01' ]
+  then
     # pve-no-subscription
     msg "Setting PVE host to PVE to 'pve-no-subscription'..."
-    if [ -f "/etc/apt/sources.list.d/pve-enterprise.list" ]; then
+    if [ -f "/etc/apt/sources.list.d/pve-enterprise.list" ]
+    then
       rm /etc/apt/sources.list.d/pve-enterprise.list > /dev/null
     fi
     # Remove any old 'pve-no-subscription'
     sed -i '/^.*pve-no-subscription$/d' /etc/apt/sources.list
     # Add debian 'pve-no-subscription' deb
     PVE_CODENAME=$(cat /etc/os-release | awk -F'=' '/VERSION_CODENAME/ { print $2 }')
-    echo "deb http://download.proxmox.com/debian/pve ${PVE_CODENAME} pve-no-subscription" >> /etc/apt/sources.list
+    echo "deb http://download.proxmox.com/debian/pve $PVE_CODENAME pve-no-subscription" >> /etc/apt/sources.list
     # Update new list
     apt-get update -yqq
     info "PVE subscription status is: ${YELLOW}pve-no-subscription${NC}"
-  elif [ ${RESULTS} == 'TYPE02' ]; then
+  elif [ "$RESULTS" = 'TYPE02' ]
+  then
     # pve-enterprise
     msg "Use the Proxmox enterprise key guide to install and activate your key. Once complete re-run this installer. This script will exit in 3 seconds. Bye..."
     sleep 3
     return
-  elif [ ${RESULTS} == 'TYPE00' ]; then
+  elif [ "$RESULTS" = 'TYPE00' ]
+  then
     return
   fi
-elif [ $(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]') == 'active' ]; then
+elif [ "$(pvesubscription get | grep "status:.*" | awk '{ print $2 }' | tr '[:upper:]' '[:lower:]')" = 'active' ]
+then
   info "PVE subscription status: ${YELLOW}pve-enterprise edition${NC}"
-elif [[ $(cat /etc/apt/sources.list | grep '^deb.*pve-no-subscription$') ]]; then
+elif [[ $(cat /etc/apt/sources.list | grep '^deb.*pve-no-subscription$') ]]
+then
   info "PVE subscription status: ${YELLOW}pve-no-subscription${NC}"
 else
   # Fail msg
@@ -123,19 +141,7 @@ apt-get -y clean > /dev/null 2>&1
 msg "Performing PVE autoremove..."
 apt-get -y autoremove > /dev/null 2>&1
 
-# nbtscan SW
-if [ $(dpkg -s nbtscan >/dev/null 2>&1; echo $?) = 0 ]; then
-  msg "Checking nbtscan status..."
-  info "nbtscan status: ${GREEN}active (running).${NC}"
-  echo
-else
-  msg "Installing nbtscan..."
-  apt-get install -y nbtscan >/dev/null
-  if [ $(dpkg -s nbtscan >/dev/null 2>&1; echo $?) = 0 ]; then
-    info "nbtscan status: ${GREEN}active (running).${NC}"
-  fi
-  echo
-fi
+
 
 # Update turnkey appliance list
 msg "Performing turnkey appliance list updates..."
@@ -145,19 +151,22 @@ pveam update >/dev/null
 msg "Adjusting sysctl parameters..."
 # Increase the inotify limits
 # Max Queued Ecents
-if [[ $(cat /etc/sysctl.conf | grep "fs.inotify.max_queued_events =.*") ]]; then
+if [[ $(cat /etc/sysctl.conf | grep "fs.inotify.max_queued_events =.*") ]];
+then
   sed -i -r '/^#?fs.inotify.max_queued_events =.*/c\fs.inotify.max_queued_events = 16384' /etc/sysctl.conf
 else
   echo "fs.inotify.max_queued_events = 16384" >> /etc/sysctl.conf
 fi
 # Max User Instances
-if [[ $(cat /etc/sysctl.conf | grep "fs.inotify.max_user_instances =.*") ]]; then
+if [[ $(cat /etc/sysctl.conf | grep "fs.inotify.max_user_instances =.*") ]]
+then
   sed -i -r '/^#?fs.inotify.max_user_instances =.*/c\fs.inotify.max_user_instances = 512' /etc/sysctl.conf
 else
   echo "fs.inotify.max_user_instances = 512" >> /etc/sysctl.conf
 fi
 # Max User Watches
-if [[ $(cat /etc/sysctl.conf | grep "fs.inotify.max_user_watches =.*") ]]; then
+if [[ $(cat /etc/sysctl.conf | grep "fs.inotify.max_user_watches =.*") ]]
+then
   sed -i -r '/^#?fs.inotify.max_user_watches =.*/c\fs.inotify.max_user_watches = 8192' /etc/sysctl.conf
 else
   echo "fs.inotify.max_user_watches = 8192" >> /etc/sysctl.conf
@@ -169,7 +178,8 @@ sed -i -r '/^#?tmpdir:.*/c\tmpdir: \/tmp' /etc/vzdump.conf
 echo
 
 #---- PVE Container Mapping
-if [[ ! $(grep -qxF 'root:65604:100' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:100:1' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:1605:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1606:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1607:1' /etc/subuid) ]]; then
+if [[ ! $(grep -qxF 'root:65604:100' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:100:1' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:1605:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1606:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1607:1' /etc/subuid) ]]
+then
   section "PVE Container UID & GID Mapping"
 
   msg_box "#### PLEASE READ CAREFULLY - UID & GID HOST MAPPING ####
@@ -221,3 +231,4 @@ fi
 section "Completion Status"
 msg "Success. Task complete."
 echo
+#-----------------------------------------------------------------------------------

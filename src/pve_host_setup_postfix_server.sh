@@ -16,6 +16,7 @@ ipvalid () {
   # Set up local variables
   local ip=${1:-1.2.3.4}
   local IFS=.; local -a a=($ip)
+
   # Start with a regex format test
   [[ $ip =~ ^[0-9]+(\.[0-9]+){3}$ ]] || return 1
   # Test values of quads
@@ -80,12 +81,14 @@ $(printf '%s\n' "${display_conditions_msg1[@]}" | indent2)
 
 If you choose to proceed have your SMTP server credentials available."
 echo
-while true; do
+while true
+do
   read -p "Install and configure Postfix and email ( Recommended ) [y/n]?: " -n 1 -r YN
   echo
   case $YN in
     [Yy]*)
-      while true; do
+      while true
+      do
         read -p "Do you have your GMail, MailGun or Custom SMTP Server credentials ready [y/n]?: " -n 1 -r YN
         echo
         case $YN in
@@ -123,47 +126,28 @@ done
 section "Checking Prerequisites"
 
 # libsasl2-modules for Postfix
-if [ $(dpkg -s libsasl2-modules >/dev/null 2>&1; echo $?) = 0 ]; then
-  msg "Checking libsasl2-modules status..."
-  info "libsasl2-modules status: ${GREEN}installed.${NC}"
-  echo
-else
+if [[ ! $(dpkg -s libsasl2-modules 2> /dev/null) ]]
+then
   msg "Installing libsasl2-modules..."
-  apt-get install -y libsasl2-modules >/dev/null
-  if [ $(dpkg -s libsasl2-modules >/dev/null 2>&1; echo $?) = 0 ]; then
-    info "libsasl2-modules status: ${GREEN}installed.${NC}"
-  fi
-  echo
+  apt-get install libsasl2-modules -y 2> /dev/null
+  info "libsasl2-modules status: ${GREEN}installed${NC}"
 fi
 
 # postfix-pcre for Postfix
-if [ $(dpkg -s postfix-pcre >/dev/null 2>&1; echo $?) = 0 ]; then
-  msg "Checking postfix-pcre status..."
-  info "postfix-pcre status: ${GREEN}installed.${NC}"
-  echo
-else
+if [[ ! $(dpkg -s postfix-pcre 2> /dev/null) ]]
+then
   msg "Installing postfix-pcre..."
-  apt-get install -y postfix-pcre >/dev/null
-  if [ $(dpkg -s postfix-pcre >/dev/null 2>&1; echo $?) = 0 ]; then
-    info "postfix-pcre status: ${GREEN}installed.${NC}"
-  fi
-  echo
+  apt-get install postfix-pcre -y 2> /dev/null
+  info "postfix-pcre status: ${GREEN}installed${NC}"
 fi
 
 # uuencode for Postfix (part of package sharutils)
-if [ $(dpkg -s sharutils >/dev/null 2>&1; echo $?) = 0 ]; then
-  msg "Checking sharutils (uuencode) status..."
-  info "sharutils (uuencode) status: ${GREEN}installed.${NC}"
-  echo
-else
+if [[ ! $(dpkg -s sharutils 2> /dev/null) ]]
+then
   msg "Installing sharutils (uuencode)..."
-  apt-get install -y sharutils >/dev/null
-  if [ $(dpkg -s sharutils >/dev/null 2>&1; echo $?) = 0 ]; then
-    info "sharutils (uuencode) status: ${GREEN}installed.${NC}"
-  fi
-  echo
+  apt-get install sharutils -y 2> /dev/null
+  info "sharutils (uuencode) status: ${GREEN}installed${NC}"
 fi
-
 
 
 #--- Set PVE root administrator email address
@@ -183,19 +167,23 @@ while true; do
   makeselect_input2
   singleselect SELECTED "$OPTIONS_STRING"
 
-  if [ ${RESULTS} == 'TYPE01' ]; then
-    PVE_ROOT_EMAIL=${PVE_ROOT_EMAIL_OLD}
+  if [ "$RESULTS" = 'TYPE01' ]
+  then
+    PVE_ROOT_EMAIL="$PVE_ROOT_EMAIL_OLD"
     break
-  elif [ ${RESULTS} == 'TYPE02' ]; then
+  elif [ "$RESULTS" = 'TYPE02' ]
+  then
     # Update PVE root email address
-    while true; do
-      read -p "Enter a new email address: " -e -i ${PVE_ROOT_EMAIL_OLD} PVE_ROOT_EMAIL
+    while true
+    do
+      read -p "Enter a new email address: " -e -i $PVE_ROOT_EMAIL_OLD PVE_ROOT_EMAIL
       echo
-      read -p "Accept email address '${PVE_ROOT_EMAIL}' [y/n]?: " -n 1 -r
+      read -p "Accept email address '$PVE_ROOT_EMAIL' [y/n]?: " -n 1 -r
       case $YN in
         [Yy]*)
           # Validate email address
-          if [[ ! "${PVE_ROOT_EMAIL}" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$ ]]; then
+          if [[ ! "$PVE_ROOT_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$ ]]
+          then
             FAIL_MSG="There are problems with your input:\n-- '${PVE_ROOT_EMAIL}' does not pass our email validity check\n-- whitespace and/or special characters are not allowed\nTry again..."
             warn "$FAIL_MSG"
             echo
@@ -214,7 +202,8 @@ while true; do
           ;;
       esac
     done
-  elif [ ${RESULTS} == 'TYPE00' ]; then
+  elif [ "$RESULTS" = 'TYPE00' ]
+  then
     # Exit installation
     msg "You have chosen not to proceed. Aborting. Bye..."
     echo
@@ -224,7 +213,8 @@ done
 
 
 #---- Set Postfix SMTP server address
-while true; do
+while true
+do
   section "Set Postfix SMTP server address"
   
   msg "Select your email SMTP provider..."
@@ -236,22 +226,26 @@ while true; do
   makeselect_input2
   singleselect SELECTED "$OPTIONS_STRING"
 
-  if [ ${RESULTS} == 'TYPE01' ]; then
+  if [ "$RESULTS" = 'TYPE01' ]
+  then
     SMTP_HOST_ID=MailGun
     SMTP_SERVER_ADDRESS="smtp.mailgun.org"
     SMTP_SERVER_PORT=587
     SMTP_USE_TLS='yes'
     TLS='enabled'
-  elif [ ${RESULTS} == 'TYPE02' ]; then
+  elif [ "$RESULTS" = 'TYPE02' ]
+  then
     SMTP_HOST_ID=GMail
     SMTP_SERVER_ADDRESS="smtp.gmail.com"
     SMTP_SERVER_PORT=587
     SMTP_USE_TLS='yes'
     TLS='enabled'
-  elif [ ${RESULTS} == 'TYPE03' ]; then
+  elif [ "$RESULTS" = 'TYPE03' ]
+  then
     SMTP_HOST_ID=custom
     # Input custom smtp server credentials
-    while true; do
+    while true
+    do
       # Input address
       read -p "Enter SMTP server address (i.e smtp.hello.com): " -e SMTP_SERVER_ADDRESS
       # Input port
@@ -291,7 +285,8 @@ while true; do
           ;;
       esac
     done
-  elif [ ${RESULTS} == 'TYPE00' ]; then
+  elif [ "$RESULTS" = 'TYPE00' ]
+  then
     # Exit installation
     msg "You have chosen not to proceed. Aborting. Bye..."
     echo
@@ -303,7 +298,8 @@ while true; do
   --  passes openssl s_client diagnostics for SSL/TLS
   --  the server responds\n
   Check your SMTP server address and port number. Try again..."
-  if [ $(timeout 10 openssl s_client -crlf -verify_quiet -starttls smtp -connect ${SMTP_SERVER_ADDRESS}:${SMTP_SERVER_PORT} &>/dev/null <<< QUIT; echo $?) != 0 ]; then
+  if [ ! "$(timeout 10 openssl s_client -crlf -verify_quiet -starttls smtp -connect ${SMTP_SERVER_ADDRESS}:${SMTP_SERVER_PORT} &>/dev/null <<< QUIT; echo $?)" = 0 ]
+  then
     warn "$FAIL_MSG"
   else
     break
@@ -312,11 +308,12 @@ done
 
 
 #---- Set SMTP server account credentials
-while true; do
-  read -p "Enter your ${SMTP_HOST_ID} SMTP server account username: " -e SMTP_ACC_USERNAME
-  read -p "Enter your ${SMTP_HOST_ID} SMTP server account password: " -e SMTP_ACC_PWD
+while true
+do
+  read -p "Enter your $SMTP_HOST_ID SMTP server account username: " -e SMTP_ACC_USERNAME
+  read -p "Enter your $SMTP_HOST_ID SMTP server account password: " -e SMTP_ACC_PWD
   echo
-  info "Your SMTP server credentials are:\nUsername: ${YELLOW}${SMTP_ACC_USERNAME}${NC}\nPassword: ${YELLOW}${SMTP_ACC_PWD}${NC}"
+  info "Your SMTP server credentials are:\nUsername: ${YELLOW}$SMTP_ACC_USERNAME${NC}\nPassword: ${YELLOW}$SMTP_ACC_PWD${NC}"
   read -p "Accept SMTP server credentials: [y/n]? " -n 1 -r
   case $YN in
     [Yy]*)
@@ -358,9 +355,10 @@ apt-get install perl -y
 
 # Send status
 SWAKS_EXIT_CODE=$?
-if [ "${SWAKS_EXIT_CODE}" != 0 ]; then
+if [ ! "$SWAKS_EXIT_CODE" = 0 ]
+then
   # Swaks fail
-  info "Email send status: ${RED}fail${NC} (Swaks error code ${SWAKS_EXIT_CODE})"
+  info "Email send status: ${RED}fail${NC} (Swaks error code $SWAKS_EXIT_CODE)"
   echo
   display_msg1=()
   display_msg1=( "The test email could not be sent for various reasons (Swaks error code ${SWAKS_EXIT_CODE}).\n\nAnyway, check your '${PVE_ROOT_EMAIL}' mailbox for our test email in case it was delivered. If the test email doesn't appear in your inbox:\n\n  --  check your mailbox spam folder\n  --  check your junk folder\n  --  whitelist any test email\n  --  check your input credentials" )
@@ -391,9 +389,11 @@ OPTIONS_LABELS_INPUT=( "Yes - I received the test email" \
 makeselect_input2
 singleselect SELECTED "$OPTIONS_STRING"
 
-if [ ${RESULTS} == 'TYPE01' ]; then
+if [ "$RESULTS" = 'TYPE01' ]
+then
   info "SMTP server status: ${GREEN}ok${NC}"
-elif [ ${RESULTS} == 'TYPE00' ]; then
+elif [ "$RESULTS" = 'TYPE00' ]
+then
   # Exit installation
   msg "Oops. Something must be wrong with your SMTP account and/or user credentials. Check the following prerequisites and credentials:\n\n$(printf '%s\n' "${display_conditions_msg1[@]}" | indent2)\n\nFix the problem and run our PVE Toolbox SSMTP option. Aborting. Bye..."
   echo
@@ -406,7 +406,7 @@ fi
 #---- Configure Postfix SMTP service
 
 # Create /etc/postfix/sasl_passwd
-echo "[${SMTP_SERVER_ADDRESS,,}]:${SMTP_SERVER_PORT} ${SMTP_ACC_USERNAME}:${SMTP_ACC_PWD}" > ${POSTFIX_SASL_PWD}
+echo "[${SMTP_SERVER_ADDRESS,,}]:${SMTP_SERVER_PORT} ${SMTP_ACC_USERNAME}:${SMTP_ACC_PWD}" > $POSTFIX_SASL_PWD
 # Create HASH
 postmap hash:${POSTFIX_SASL_PWD}
 # Set file permissions
@@ -414,7 +414,8 @@ chmod 600 ${POSTFIX_SASL_PWD} ${POSTFIX_SASL_DB}
 
 
 # Server specific configure Postfix configuration file /etc/postfix/main.cf
-if [ ${SMTP_HOST_ID,,} == gmail ]; then
+if [ "${SMTP_HOST_ID,,}" = 'gmail' ]
+then
   # Gmail
   # Specify SMTP relay host
   postconf -e relayhost=[${SMTP_SERVER_ADDRESS,,}]:${SMTP_SERVER_PORT}
@@ -436,7 +437,8 @@ if [ ${SMTP_HOST_ID,,} == gmail ]; then
   postconf -e smtp_tls_session_cache_database=btree:/var/lib/postfix/smtp_tls_session_cache
   postconf -e smtp_tls_session_cache_timeout=3600s
   echo
-elif [ ${SMTP_HOST_ID,,} == mailgun ]; then
+elif [ "${SMTP_HOST_ID,,}" = 'mailgun' ]
+then
   # Mailgun
   # Specify SMTP relay host
   postconf -e relayhost=[${SMTP_SERVER_ADDRESS,,}]:${SMTP_SERVER_PORT}
@@ -456,7 +458,8 @@ elif [ ${SMTP_HOST_ID,,} == mailgun ]; then
   postconf -e smtp_tls_session_cache_database=btree:/var/lib/postfix/smtp_tls_session_cache
   postconf -e smtp_tls_session_cache_timeout=3600s
   echo
-elif [ ${SMTP_HOST_ID,,} == custom ]; then
+elif [ "${SMTP_HOST_ID,,}" = 'custom' ]
+then
   # Custom
   # Specify SMTP relay host
   postconf -e relayhost=[${SMTP_SERVER_ADDRESS,,}]:${SMTP_SERVER_PORT}

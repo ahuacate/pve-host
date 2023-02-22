@@ -17,9 +17,9 @@
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 # DIR="${REPO_TEMP}/${GIT_REPO}"
-COMMON_DIR="${DIR}/../common"
-COMMON_PVE_SRC_DIR="${DIR}/common/pve/src"
-SHARED_DIR="${DIR}/shared"
+COMMON_DIR="$DIR/../common"
+COMMON_PVE_SRC_DIR="$DIR/common/pve/src"
+SHARED_DIR="$DIR/shared"
 
 #---- Dependencies -----------------------------------------------------------------
 
@@ -35,8 +35,8 @@ fi
 
 # Installer cleanup
 function installer_cleanup () {
-rm -R ${REPO_TEMP}/${GIT_REPO} &> /dev/null
-rm ${REPO_TEMP}/${GIT_REPO}.tar.gz &> /dev/null
+rm -R "$REPO_TEMP/$GIT_REPO" &> /dev/null
+rm $REPO_TEMP/${GIT_REPO}.tar.gz &> /dev/null
 }
 
 #---- Static Variables -------------------------------------------------------------
@@ -54,7 +54,7 @@ GIT_COMMON='0'
 
 # Set Package Installer Temp Folder
 REPO_TEMP='/tmp'
-cd ${REPO_TEMP}
+cd "$REPO_TEMP"
 
 #---- Local Repo path (check if local)
 # For local SRC a 'developer_settings.git' file must exist in repo dir (value: dev_git_mount=0)
@@ -68,20 +68,21 @@ SECTION_HEAD='PVE Host Toolbox'
 #---- Other Files ------------------------------------------------------------------
 
 #---- Package loader
-if [ -f ${REPO_PATH}/common/bash/src/pve_repo_loader.sh ] && [[ $(sed -n 's/^dev_git_mount=//p' ${REPO_PATH}/developer_settings.git 2> /dev/null) == '0' ]]; then
+if [ -f "$REPO_PATH/common/bash/src/pve_repo_loader.sh" ] && [[ $(sed -n 's/^dev_git_mount=//p' $REPO_PATH/developer_settings.git 2> /dev/null) == '0' ]]
+then
   # Download Local loader (developer)
-  source ${REPO_PATH}/common/bash/src/pve_repo_loader.sh
+  source $REPO_PATH/common/bash/src/pve_repo_loader.sh
 else
   # Download Github loader
-  wget -qL - https://raw.githubusercontent.com/${GIT_USER}/common/main/bash/src/pve_repo_loader.sh -O ${REPO_TEMP}/pve_repo_loader.sh
-  chmod +x ${REPO_TEMP}/pve_repo_loader.sh
-  source ${REPO_TEMP}/pve_repo_loader.sh
+  wget -qL - https://raw.githubusercontent.com/$GIT_USER/common/main/bash/src/pve_repo_loader.sh -O $REPO_TEMP/pve_repo_loader.sh
+  chmod +x $REPO_TEMP/pve_repo_loader.sh
+  source $REPO_TEMP/pve_repo_loader.sh
 fi
 
 #---- Body -------------------------------------------------------------------------
 
 #---- Run Bash Header
-source ${COMMON_PVE_SRC_DIR}/pvesource_bash_defaults.sh
+source $COMMON_PVE_SRC_DIR/pvesource_bash_defaults.sh
 
 # Check PVE SMTP status
 check_smtp_status
@@ -117,16 +118,19 @@ OPTIONS_LABELS_INPUT=( "Primary - Primary PVE host" \
 "Secondary - Secondary PVE host (cluster node)" )
 makeselect_input2
 singleselect SELECTED "$OPTIONS_STRING"
-if [ ${RESULTS} == 'TYPE01' ]; then
-  PVE_TYPE='1'
+if [ "$RESULTS" = 'TYPE01' ]
+then
+  PVE_TYPE=1
   export PVE_TYPE=1
-elif [ ${RESULTS} == 'TYPE02' ]; then
-  PVE_TYPE='2'
+elif [ "$RESULTS" = 'TYPE02' ]
+then
+  PVE_TYPE=2
   export PVE_TYPE=2
 fi
 
 #---- Run Installer
-while true; do
+while true
+do
   section "Run a PVE Host Add-On task"
 
   msg_box "The User must select a task to perform. 'PVE Host Basic' is mandatory or required for all hosts. 'PVE Full Build' includes the full suite of Toolbox add-on options.\n\nSelect a Toolbox task or 'None. Exit this installer' to leave."
@@ -137,52 +141,55 @@ while true; do
   "PVESM NFS Storage - add NFS PVE storage mounts" \
   "PVESM SMB/CIFS Storage - add SMB/CIFS storage mounts" \
   "PVE Hostname Updater - change a hosts hostname" \
-  "Fail2Ban Installer $(if [ $(dpkg -s fail2ban >/dev/null 2>&1; echo $?) = 0 ]; then echo "( installed & active )"; else echo "(not installed)"; fi)" \
-  "SMTP Email Server Setup $(if [ "${SMTP_STATUS}" == 1 ]; then echo "( installed & active )"; else echo "(not installed)"; fi)" \
+  "Fail2Ban Installer $(if [ "$(dpkg -s fail2ban >/dev/null 2>&1; echo $?)" = 0 ]; then echo "( installed & active )"; else echo "(not installed)"; fi)" \
+  "SMTP Email Server Setup $(if [ "$SMTP_STATUS" = 1 ]; then echo "( installed & active )"; else echo "(not installed)"; fi)" \
   "PVE CT updater - mass update all CT OS" \
   "None. Exit this installer" )
   makeselect_input2
   singleselect SELECTED "$OPTIONS_STRING"
 
-  if [ ${RESULTS} == 'TYPE01' ]; then
+  if [ "$RESULTS" = 'TYPE01' ]; then
     #---- Configure PVE host - basic
-    source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_basic.sh
+    source $REPO_TEMP/$GIT_REPO/src/pve_host_setup_basic.sh
 
-  elif [ ${RESULTS} == 'TYPE02' ]; then
+  elif [ "$RESULTS" = 'TYPE02' ]; then
     #---- Create PVE Storage mounts (NFS)
-    if [ ${PVE_TYPE} == '1' ]; then
-      source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_add_nfs_mounts.sh
+    if [ "$PVE_TYPE" = 1 ]
+    then
+      source $REPO_TEMP/$GIT_REPO/src/pve_host_add_nfs_mounts.sh
     else
       warn "${warn_msg}"
       echo
     fi
-  elif [ ${RESULTS} == 'TYPE03' ]; then
+  elif [ "$RESULTS" = 'TYPE03' ]; then
     #---- Create PVE Storage mounts (CIFS)
-    if [ ${PVE_TYPE} == '1' ]; then
-      source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_add_cifs_mounts.sh
+    if [ "$PVE_TYPE" = 1 ]
+    then
+      source $REPO_TEMP/$GIT_REPO/src/pve_host_add_cifs_mounts.sh
     else
       warn "${warn_msg}"
       echo
     fi
-  elif [ ${RESULTS} == 'TYPE04' ]; then
+  elif [ "$RESULTS" = 'TYPE04' ]; then
     #---- PVE Hostname edit
-    source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_hostname.sh
-    source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_hostnameupdate.sh
-  elif [ ${RESULTS} == 'TYPE05' ]; then
+    source $REPO_TEMP/$GIT_REPO/src/pve_host_setup_hostname.sh
+    source $REPO_TEMP/$GIT_REPO/src/pve_host_setup_hostnameupdate.sh
+  elif [ "$RESULTS" = 'TYPE05' ]; then
     #---- Install and Configure Fail2ban
-    source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_fail2ban.sh
-  elif [ ${RESULTS} == 'TYPE06' ]; then
+    source $REPO_TEMP/$GIT_REPO/src/pve_host_setup_fail2ban.sh
+  elif [ "$RESULTS" = 'TYPE06' ]; then
     #---- Configure Email Alerts
-    source ${REPO_TEMP}/${GIT_REPO}/src/pve_host_setup_postfix_server.sh
-  elif [ ${RESULTS} == 'TYPE07' ]; then
+    source $REPO_TEMP/$GIT_REPO/src/pve_host_setup_postfix_server.sh
+  elif [ "$RESULTS" = 'TYPE07' ]; then
     #---- PVE CT Updater
-    if [ ${PVE_TYPE} == '1' ]; then
-      source ${REPO_TEMP}/${GIT_REPO}/src/pvetool_ct_updater.sh
+    if [ "$PVE_TYPE" = 1 ]
+    then
+      source $REPO_TEMP/$GIT_REPO/src/pvetool_ct_updater.sh
     else
       warn "${warn_msg}"
       echo
     fi
-  elif [ ${RESULTS} == 'TYPE00' ]; then
+  elif [ "$RESULTS" = 'TYPE00' ]; then
     # Exit installation
     msg "You have chosen not to proceed. Aborting. Bye..."
     echo

@@ -16,6 +16,7 @@ ipvalid () {
   # Set up local variables
   local ip=${1:-1.2.3.4}
   local IFS=.; local -a a=($ip)
+
   # Start with a regex format test
   [[ $ip =~ ^[0-9]+(\.[0-9]+){3}$ ]] || return 1
   # Test values of quads
@@ -32,7 +33,8 @@ ipvalid () {
 SECTION_HEAD='PVE Host Postfix Setup'
 
 # Check for PVE Hostname mod
-if [ -z "${HOSTNAME_FIX+x}" ]; then
+if [ -z "${HOSTNAME_FIX+x}" ]
+then
   PVE_HOSTNAME=$HOSTNAME
 fi
 
@@ -65,12 +67,14 @@ SMTP is a simple Mail Transfer Agent (MTA) while easy to setup it requires the f
 
 If you choose to proceed have your SMTP server credentials available. This script will configure your PVE nodes Postfix SMTP server."
 echo
-while true; do
+while true
+do
   read -p "Install and configure Postfix and email alerts( Recommended ) [y/n]?: " -n 1 -r YN
   echo
   case $YN in
     [Yy]*)
-      while true; do
+      while true
+      do
         read -p "Do you have your GMail, MailGun or Custom SMTP Server credentials ready [y/n]?: " -n 1 -r YN
         echo
         case $YN in
@@ -109,45 +113,27 @@ done
 section "Checking Prerequisites"
 
 # libsasl2-modules for Postfix
-if [ $(dpkg -s libsasl2-modules >/dev/null 2>&1; echo $?) = 0 ]; then
-  msg "Checking libsasl2-modules status..."
-  info "libsasl2-modules status: ${GREEN}installed.${NC}"
-  echo
-else
+if [[ ! $(dpkg -s libsasl2-modules 2> /dev/null) ]]
+then
   msg "Installing libsasl2-modules..."
-  apt-get install -y libsasl2-modules >/dev/null
-  if [ $(dpkg -s libsasl2-modules >/dev/null 2>&1; echo $?) = 0 ]; then
-    info "libsasl2-modules status: ${GREEN}installed.${NC}"
-  fi
-  echo
+  apt-get install libsasl2-modules -y 2> /dev/null
+  info "libsasl2-modules status: ${GREEN}installed${NC}"
 fi
 
 # postfix-pcre for Postfix
-if [ $(dpkg -s postfix-pcre >/dev/null 2>&1; echo $?) = 0 ]; then
-  msg "Checking postfix-pcre status..."
-  info "postfix-pcre status: ${GREEN}installed.${NC}"
-  echo
-else
+if [[ ! $(dpkg -s postfix-pcre 2> /dev/null) ]]
+then
   msg "Installing postfix-pcre..."
-  apt-get install -y postfix-pcre >/dev/null
-  if [ $(dpkg -s postfix-pcre >/dev/null 2>&1; echo $?) = 0 ]; then
-    info "postfix-pcre status: ${GREEN}installed.${NC}"
-  fi
-  echo
+  apt-get install postfix-pcre -y 2> /dev/null
+  info "postfix-pcre status: ${GREEN}installed${NC}"
 fi
 
 # uuencode for Postfix (part of package sharutils)
-if [ $(dpkg -s sharutils >/dev/null 2>&1; echo $?) = 0 ]; then
-  msg "Checking sharutils (uuencode) status..."
-  info "sharutils (uuencode) status: ${GREEN}installed.${NC}"
-  echo
-else
+if [[ ! $(dpkg -s sharutils 2> /dev/null) ]]
+then
   msg "Installing sharutils (uuencode)..."
-  apt-get install -y sharutils >/dev/null
-  if [ $(dpkg -s sharutils >/dev/null 2>&1; echo $?) = 0 ]; then
-    info "sharutils (uuencode) status: ${GREEN}installed.${NC}"
-  fi
-  echo
+  apt-get install sharutils -y 2> /dev/null
+  info "sharutils (uuencode) status: ${GREEN}installed${NC}"
 fi
 
 #---- Setting PVE Postfix SMTP server vars
@@ -161,7 +147,8 @@ while true; do
   POSTFIX_SASL_DB=/etc/postfix/sasl_passwd.db
 
   # Set PVE SMTP Server Type
-  while true; do
+  while true
+  do
     TYPE01="${YELLOW}Mailgun${NC} - Configure for a Mailgun SMTP server."
     TYPE02="${YELLOW}GMail${NC} - Configure for a GMail SMTP server."
     TYPE03="${YELLOW}Other${NC} - Custom SMTP server configuration."
@@ -210,10 +197,10 @@ while true; do
 
 
     # Validating SMTP Server Address
-    ip=${SMTP_SERVER_ADDRESS}
+    ip="$SMTP_SERVER_ADDRESS"
     if ipvalid "$ip"; then
       msg "Validating SMTP IPv4 address..."
-      if [ $(ping -s 1 -c 2 "$(echo "${SMTP_SERVER_ADDRESS}")" >/dev/null; echo $?) = 0 ] || [ $(nc -z -w 5 ${SMTP_SERVER_ADDRESS} ${SMTP_SERVER_PORT} 2>/dev/null; echo $?) = 0 ]; then
+      if [ "$(ping -s 1 -c 2 "$(echo "$SMTP_SERVER_ADDRESS")" >/dev/null; echo $?)" = 0 ] || [ $(nc -z -w 5 ${SMTP_SERVER_ADDRESS} ${SMTP_SERVER_PORT} 2>/dev/null; echo $?) = 0 ]; then
         info "SMTP server address is set as: ${YELLOW}${SMTP_SERVER_ADDRESS}${NC}:${YELLOW}${SMTP_SERVER_PORT}${NC}"
         echo
         break
@@ -235,7 +222,8 @@ while true; do
   done
 
   # Set SMTP Credentials
-  while true; do
+  while true
+  do
     read -p "Enter your ${SMTP_TYPE,,} SMTP server login username: " -e SMTP_USERNAME
     read -p "Enter your ${SMTP_TYPE,,} SMTP server password: " -e SMTP_PWD
     echo
@@ -255,26 +243,29 @@ while true; do
   # Set PVE root administrator email address
   PVE_ROOT_EMAIL_OLD=$(pveum user list | awk -F " │ " '$1 ~ /root@pam/' | awk -F " │ " '{ print $3 }')
   msg "Validate your PVE root or system email address..."
-  msg "Your PVE root user email address is ${WHITE}${PVE_ROOT_EMAIL_OLD}${NC}. This email address is set to send all PVE system notifications and alerts. In the next steps you have the option to accept or change your default PVE root email address."
-  read -p "Accept PVE root email address ${WHITE}${PVE_ROOT_EMAIL_OLD}${NC} [y/n]?: " -n 1 -r
+  msg "Your PVE root user email address is ${WHITE}$PVE_ROOT_EMAIL_OLD${NC}. This email address is set to send all PVE system notifications and alerts. In the next steps you have the option to accept or change your default PVE root email address."
+  read -p "Accept PVE root email address ${WHITE}$PVE_ROOT_EMAIL_OLD${NC} [y/n]?: " -n 1 -r
   echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
-    PVE_ROOT_EMAIL=${PVE_ROOT_EMAIL_OLD}
-    info "PVE root email address remains unchanged: ${YELLOW}${PVE_ROOT_EMAIL}${NC}."
+  if [[ $REPLY =~ ^[Yy]$ ]]
+  then
+    PVE_ROOT_EMAIL="$PVE_ROOT_EMAIL_OLD"
+    info "PVE root email address remains unchanged: ${YELLOW}$PVE_ROOT_EMAIL${NC}"
     echo
   else
-    while true; do
-      read -p "Enter a valid PVE root email address: " -e -i ${PVE_ROOT_EMAIL_OLD} PVE_ROOT_EMAIL
+    while true
+    do
+      read -p "Enter a valid PVE root email address: " -e -i $PVE_ROOT_EMAIL_OLD PVE_ROOT_EMAIL
       echo
-      if [[ "${PVE_ROOT_EMAIL}" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$ ]]; then
+      if [[ "$PVE_ROOT_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$ ]]
+      then
         pveum user modify root@pam -email ${PVE_ROOT_EMAIL}
-        msg "Email address ${PVE_ROOT_EMAIL} is valid."
-        info "PVE root email address is set: ${YELLOW}${PVE_ROOT_EMAIL}${NC}."
+        msg "Email address $PVE_ROOT_EMAIL is valid."
+        info "PVE root email address is set: ${YELLOW}$PVE_ROOT_EMAIL${NC}"
         echo
         break
       else
-        msg "Email address ${PVE_ROOT_EMAIL} is invalid."
-        warn "There are problems with your input:\n1. Email address $(echo "${PVE_ROOT_EMAIL}") does not pass the validity check.\nTry again..."
+        msg "Email address $PVE_ROOT_EMAIL is invalid."
+        warn "There are problems with your input:\n1. Email address $(echo "$PVE_ROOT_EMAIL") does not pass the validity check.\nTry again..."
         echo
       fi
     done
@@ -288,14 +279,16 @@ while true; do
   msg "Creating /etc/postfix/sasl_passwd..."
   echo [${SMTP_SERVER_ADDRESS,,}]:${SMTP_SERVER_PORT} ${SMTP_USERNAME}:${SMTP_PWD} > ${POSTFIX_SASL_PWD}
   # Generate a .db file
-  if [ -f "${POSTFIX_SASL_DB}" ]; then
+  if [ -f "${POSTFIX_SASL_DB}" ]
+  then
     rm ${POSTFIX_SASL_DB} >/dev/null
   fi
   postmap hash:${POSTFIX_SASL_PWD}
   chmod 600 ${POSTFIX_SASL_PWD} ${POSTFIX_SASL_DB}
 
   # Modify Postfix configuration file /etc/postfix/main.cf
-  if [ ${SMTP_TYPE} = "gmail" ]; then
+  if [ "$SMTP_TYPE" = 'gmail' ]
+  then
     msg "Configuring Postfix for a ${SMTP_TYPE^} server..."
     # Gmail
     # Specify SMTP relay host
@@ -320,7 +313,8 @@ while true; do
     postconf -e smtp_tls_session_cache_database=btree:/var/lib/postfix/smtp_tls_session_cache
     postconf -e smtp_tls_session_cache_timeout=3600s
     echo
-  elif [ ${SMTP_TYPE} = "mailgun" ]; then
+  elif [ "$SMTP_TYPE" = 'mailgun' ]
+  then
     msg "Configuring Postfix for a ${SMTP_TYPE^} server..."
     # Mailgun
     # Specify SMTP relay host
@@ -343,7 +337,8 @@ while true; do
     postconf -e smtp_tls_session_cache_database=btree:/var/lib/postfix/smtp_tls_session_cache
     postconf -e smtp_tls_session_cache_timeout=3600s
     echo
-  elif [ ${SMTP_TYPE} = "custom" ]; then
+  elif [ "$SMTP_TYPE" = 'custom' ]
+  then
     msg "Configuring Postfix for a ${SMTP_TYPE^} server..."
     # Custom
     # Specify SMTP relay host
@@ -351,13 +346,14 @@ while true; do
     # Enable STARTTLS encryption
     read -p "Does your SMTP server support TLS encryption [y/n]?: " -n 1 -r
     echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ "$REPLY" =~ ^[Yy]$ ]]
+    then
       postconf -e smtp_use_tls=yes
-      info "Postfix SMTP TLS support: ${YELLOW}Enabled${NC}."
+      info "Postfix SMTP TLS support: ${YELLOW}Enabled${NC}"
       echo
     else
       postconf -e smtp_use_tls=
-      info "Postfix SMTP TLS support: ${YELLOW}Disabled${NC}."
+      info "Postfix SMTP TLS support: ${YELLOW}Disabled${NC}"
       echo
     fi
     # Enable SASL authentication
@@ -379,7 +375,7 @@ while true; do
   fi
 
   # Customised Email header
-  echo /^From:.*/ REPLACE From: "${PVE_HOSTNAME,,}-alert" '<'$(echo ${PVE_ROOT_EMAIL} | sed 's/@.*//')@localdomain'>' > /etc/postfix/smtp_header_checks
+  echo /^From:.*/ REPLACE From: "${PVE_HOSTNAME,,}-alert" '<'$(echo "$PVE_ROOT_EMAIL" | sed 's/@.*//')@localdomain'>' > /etc/postfix/smtp_header_checks
   postmap /etc/postfix/smtp_header_checks
 
   # Reload Postfix configuration file /etc/postfix/main.cf
@@ -402,9 +398,10 @@ while true; do
 
     --  All changes must be made manually by the PVE system administrator. (i.e edit  /etc/postfix/main.cf )"
   echo
-  read -p "Do you want to send a test email to ${PVE_ROOT_EMAIL} [y/n]?: " -n 1 -r
+  read -p "Do you want to send a test email to $PVE_ROOT_EMAIL [y/n]?: " -n 1 -r
   echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
+  if [[ "$REPLY" =~ ^[Yy]$ ]]
+  then
     echo
     msg "Sending test email to ${PVE_ROOT_EMAIL}..."
     echo -e "\n  To: ${PVE_ROOT_EMAIL}\n  From: "${PVE_HOSTNAME,,}-alert"\n  Subject: Test Postfix\n\n  Hello World.\n\n  Your PVE host Postfix SMTP mail server works.\n  Congratulations.\n"
@@ -416,10 +413,12 @@ while true; do
     echo
     read -p "Did you receive a PVE test email message in your mailbox [y/n]?: " -n 1 -r
     echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ "$REPLY" =~ ^[Yy]$ ]]
+    then
       info "Success. Your PVE Postfix SMTP server is working."
       # Remove old Ahuacate Check line
-      if [[ $(cat /etc/postfix/main.cf | grep "### Ahuacate_Check=.*") ]]; then
+      if [[ $(cat /etc/postfix/main.cf | grep "### Ahuacate_Check=.*") ]]
+      then
         sed -i '/### Ahuacate_Check=.*/d' /etc/postfix/main.cf
       fi
       # Add Ahuacate Check line=0
@@ -428,7 +427,8 @@ while true; do
     else
       read -p "Do you want to re-input your Postfix SMTP credentials (again) [y/n]?: " -n 1 -r
       echo
-      if [[ $REPLY =~ ^[Yy]$ ]]; then
+      if [[ "$REPLY" =~ ^[Yy]$ ]]
+      then
         info "You have chosen to re-input your credentials. Try again."
         sleep 2
         echo
@@ -436,7 +436,8 @@ while true; do
       else
         info "You have chosen to accept your inputs despite them not working.\nSkipping the validation step."
         # Remove old Ahuacate Check line
-        if [[ $(cat /etc/postfix/main.cf | grep "### Ahuacate_Check=.*") ]]; then
+        if [[ $(cat /etc/postfix/main.cf | grep "### Ahuacate_Check=.*") ]]
+        then
           sed -i '/### Ahuacate_Check=.*/d' /etc/postfix/main.cf
         fi
         # Add Ahuacate Check line=1
@@ -453,17 +454,11 @@ echo
 
 # Activate E-Mail Notification & Email Alerts
 # zfs-zed SW
-if [ $(dpkg -s zfs-zed >/dev/null 2>&1; echo $?) = 0 ]; then
-  msg "Checking zfs-zed status..."
-  info "zfs-zed status: ${GREEN}active (running).${NC}"
-  echo
-else
+if [[ ! $(dpkg -s zfs-zed) ]]
+then
   msg "Installing zfs-zed..."
   apt-get install -y zfs-zed >/dev/null
-  if [ $(dpkg -s zfs-zed >/dev/null 2>&1; echo $?) = 0 ]; then
-    info "zfs-zed status: ${GREEN}active (running).${NC}"
-  fi
-  echo
+  info "zfs-zed status: ${GREEN}active${NC} (running)"
 fi
 sed -i 's|#ZED_EMAIL_ADDR.*|ZED_EMAIL_ADDR="root"|g' /etc/zfs/zed.d/zed.rc
 
@@ -472,3 +467,4 @@ sed -i 's|#ZED_EMAIL_ADDR.*|ZED_EMAIL_ADDR="root"|g' /etc/zfs/zed.d/zed.rc
 section "Completion Status."
 msg "Success. Task complete."
 echo
+#-----------------------------------------------------------------------------------
