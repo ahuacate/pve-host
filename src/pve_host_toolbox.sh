@@ -98,7 +98,7 @@ do
   msg_box "The User must select a task to perform. 'PVE Host Basic' is mandatory or required for all hosts. 'PVE Full Build' includes the full suite of Toolbox add-on options.\n\nSelect a Toolbox task or 'None. Exit this installer' to leave."
   echo
   warn_msg="Only primary PVE hosts can run this add-on task.\nRun another task or select 'None. Exit this installer'. Try again..."
-  OPTIONS_VALUES_INPUT=( "TYPE01" "TYPE02" "TYPE03" "TYPE04" "TYPE05" "TYPE06" "TYPE07" "TYPE00" )
+  OPTIONS_VALUES_INPUT=( "TYPE01" "TYPE02" "TYPE03" "TYPE04" "TYPE05" "TYPE06" "TYPE07" "TYPE08" "TYPE00" )
   OPTIONS_LABELS_INPUT=( "PVE Basic - required by all hosts (mandatory)" \
   "PVESM NFS Storage - add NFS PVE storage mounts" \
   "PVESM SMB/CIFS Storage - add SMB/CIFS storage mounts" \
@@ -106,6 +106,7 @@ do
   "Fail2Ban Installer $(if [ "$(dpkg -s fail2ban >/dev/null 2>&1; echo $?)" = 0 ]; then echo "( installed & active )"; else echo "(not installed)"; fi)" \
   "SMTP Email Server Setup $(if [ "$SMTP_STATUS" = 1 ]; then echo "( installed & active )"; else echo "(not installed)"; fi)" \
   "PVE CT updater - mass update all CT OS" \
+  "PVE Host Grub boot delay - set the grub boot delay (recommended)" \
   "None. Exit this installer" )
   makeselect_input2
   singleselect SELECTED "$OPTIONS_STRING"
@@ -151,6 +152,9 @@ do
       warn "${warn_msg}"
       echo
     fi
+  elif [ "$RESULTS" = 'TYPE08' ]; then
+    #---- Configure PVE Host boot delay
+    source $REPO_TEMP/$GIT_REPO/src/pve_host_setup_boot_delay.sh
   elif [ "$RESULTS" = 'TYPE00' ]; then
     # Exit installation
     msg "You have chosen not to proceed. Aborting. Bye..."

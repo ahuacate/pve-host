@@ -22,13 +22,14 @@ SECTION_HEAD='PVE Host Basic Setup'
 apt-get update -y > /dev/null
 
 # nbtscan SW
-if [[ ! $(dpkg -s nbtscan) ]]
+if [[ ! $(dpkg -s nbtscan 2> /dev/null) ]]
 then
   msg "Installing nbtscan..."
   apt-get install -y nbtscan >/dev/null
   info "nbtscan status: ${GREEN}active${NC}"
   echo
 fi
+
 
 #---- Introduction
 section "Introduction"

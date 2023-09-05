@@ -232,18 +232,38 @@ fi
 
 
 # Check NFS version
-msg "Checking NAS NFS version..."
-NFS_VER=$(rpcinfo -p $NAS_ID | grep nfs | awk '{ print $2 }' | sort -k2 -nr | head -1)
-if [ "$NFS_VER" -ge 4 ]
-then
+msg " Checking PVE NFS support"
+# Check PVE host NFS supported version no.
+# Match to highest NFS4 when possible for 'backup' mounts
+nfs_ver_pve_LIST=( "4.2" "4.1" "4" "3" "default" )
+nfs_ver_pve_max=$(rpcinfo -p | awk '{print $2}' | sort -rn | head -1)
+
+# NAS NFS supported version no.
+# nfs_ver_nas_max=$(nfsstat -m "$NAS_ID" | grep -oP 'vers=\K\d+\.\d+' | sort -k2 -nr | head -1)
+nfs_ver_nas_max=$(rpcinfo -p "$NAS_ID" | grep nfs | awk '{print $2}' | sort -k2 -nr | head -1)
+
+
+# Set $nfs_ver_max
+# Set to highest nfs version match for client and server
+if (( $(echo "$nfs_ver_pve_max <= $nfs_ver_nas_max" | bc -l) )); then
+  nfs_ver_max=$(printf '%s\n' "${nfs_ver_pve_LIST[@]}" | grep -E "^$nfs_ver_pve_max\.[0-9]+$" | sort -rn | head -1)
+  if [ -z "$nfs_ver_max" ]; then
+    nfs_ver_max=$(printf '%s\n' "${nfs_ver_pve_LIST[@]}" | grep -E "^$nfs_ver_pve_max$" | sort -rn | head -1)
+  fi
+else
+  nfs_ver_max=$(printf '%s\n' "${nfs_ver_pve_LIST[@]}" | grep -E "^$nfs_ver_nas_max\.[0-9]+$" | sort -rn | head -1)
+  if [ -z "$nfs_ver_max" ]; then
+    nfs_ver_max=$(printf '%s\n' "${nfs_ver_pve_LIST[@]}" | grep -E "^$nfs_ver_nas_max$" | sort -rn | head -1)
+  fi
+fi
+
+# Check if NAS nfs meets minimum requirement
+if (( $(echo "$nfs_ver_nas_max >= 4" | bc -l) )); then
   info "NFS version check: ${YELLOW}pass${NC}"
-elif [ "$NFS_VER" -lt 4 ] && [ "$NFS_VER" -ge 3 ]
-then
-  info "NFS version check: ${YELLOW}pass${NC} (NFSv3 limited)"
-elif [ "$NFS_VER" -lt 3 ]
-then
-  NFS_VER=1
-  warn "Your NFS Server '${NAS_ID}' is running NFSv2 or older. You must upgrade your NFS server to support NFSv3 or higher. User intervention required. Exiting installation script."
+elif (( $(echo "$nfs_ver_nas_max < 4 && $nfs_ver_nas_max >= 3" | bc -l) )); then
+  info "NFS version check: ${YELLOW}pass${NC} (NFSv3 limit - potential connectivity issues)"
+else
+  warn "Your NFS Server '${NAS_ID}' is running NFSv2 or older. You must upgrade your NFS server to support NFSv4 or higher. User intervention required. Exiting installation script."
   sleep 1
   return
 fi
@@ -371,13 +391,15 @@ then
     PVESM_LABEL="${NAS_HOSTNAME,,}-${TYPE}"
     if [ "${PVESM_LABEL}" == "$(echo ${NAS_HOSTNAME,,}-backup)" ]
     then
+      # Round down $nfs_ver_max
+      nfs_ver_max_int=$(printf "%.0f" "$nfs_ver_max")
       msg "Creating PVE storage mount..."
-      pvesm add nfs $PVESM_LABEL --path /mnt/pve/$PVESM_LABEL --server $NAS_ID --export $SHARE --content backup --maxfiles 3 --options vers=$NFS_VER
+      pvesm add nfs $PVESM_LABEL --path /mnt/pve/$PVESM_LABEL --server $NAS_ID --export $SHARE --content backup,images --maxfiles 3 --preallocation metadata --options vers=$nfs_ver_max_int
       info "PVE storage mount created: ${YELLOW}$PVESM_LABEL${NC}\n       (${NAS_ID}:${SHARE})"
       echo
     else
       msg "Creating PVE storage mount..."
-      pvesm add nfs $PVESM_LABEL --path /mnt/pve/$PVESM_LABEL --server $NAS_ID --export $SHARE --content images --options vers=$NFS_VER
+      pvesm add nfs $PVESM_LABEL --path /mnt/pve/$PVESM_LABEL --server $NAS_ID --export $SHARE --content images
       info "PVE storage mount created: ${YELLOW}$PVESM_LABEL${NC}\n       (${NAS_ID}:${SHARE})"
       echo    
     fi

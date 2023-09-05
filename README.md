@@ -1,10 +1,8 @@
 <H1>PVE Host Setup</H1>
 
-This guide is for configuring your Proxmox hosts. You must follow this guide to build a reliable Proxmox host configured to support our suite of LXC and VM applications.
+This guide aims to help you configure your Proxmox hosts to support our suite of LXC and VM applications, allowing for the creation of a dependable Proxmox host.
 
-Included are step-by-step instructions and an Easy Script Toolbox to automate much of the work.
-
-The East Script Toolbox add-on "PVE Basic" must be run on all PVE hosts (primary and secondary). "PVE Basic" includes <span style="color:red">critical PVE Container UID & GID mapping required by all Ahuacate CTs and VMs</span> resolving permission rights for bind-mounted shared data.
+It includes step-by-step instructions and an Easy Script Toolbox that can automate much of the work. Moreover, the "PVE Basic" add-on in the Easy Script Toolbox should be executed on all PVE hosts (both primary and secondary). This add-on contains <span style="color:red">essential PVE Container UID & GID mapping</span> required by all Ahuacate CTs and VMs, ensuring permission rights for bind-mounted shared data are resolved.
 
 <h2>Features</h2>
 
@@ -50,15 +48,17 @@ Optional information required running specific Easy Script Toolbox add-ons.
 
 <h2>Local DNS Records</h2>
 
-We recommend <span style="color:red">you read</span> about network Local DNS and why a PiHole server is a necessity. Click <a href="https://github.com/ahuacate/common/tree/main/pve/src/local_dns_records.md" target="_blank">here</a> to learn more before proceeding any further.
+Before proceeding, we <span style="color:red">strongly advise</span> that you familiarize yourself with network Local DNS and the importance of having a PiHole server. To learn more, click <a href="https://github.com/ahuacate/common/tree/main/pve/src/local_dns_records.md" target="_blank">here</a>.
 
-Your network Local Domain or Search domain must be also set. We recommend only top-level domain (spTLD) names for residential and small networks names because they cannot be resolved across the internet. Routers and DNS servers know, in theory, not to forward ARPA requests they do not understand onto the public internet. It is best to choose one of our listed names: local, home.arpa, localdomain or lan only. Do NOT use made-up names.
+It is essential to set your network's Local Domain or Search domain. For residential and small networks, we recommend using only top-level domain (spTLD) names because they cannot be resolved across the internet. Routers and DNS servers understand that ARPA requests they do not recognize should not be forwarded onto the public internet. It is best to select one of the following names: local, home.arpa, localdomain, or lan only. We strongly advise against using made-up names.
 
 <h2>Easy Scripts</h2>
 
-Easy Scripts automate the installation and/or configuration processes. Easy Scripts are hardware type-dependent so choose carefully. Easy Scripts are based on bash scripting. `Cut & Paste` our Easy Script command into an SSH terminal window, press `Enter`, and follow the prompts and terminal instructions. 
+Easy Scripts simplify the process of installing and configuring preset configurations. To use them, all you have to do is copy and paste the Easy Script command into your terminal window, hit Enter, and follow the prompts and terminal instructions.
 
-Our Easy Scripts have preset configurations. The installer may accept or decline the ES values. If you decline the User will be prompted to input all required configuration settings. Please read our guide if you are unsure.
+Please note that all Easy Scripts assume that your network is VLAN and DHCP IPv4 ready. If this is not the case, you can decline the Easy Script prompt to accept our default settings. Simply enter 'n' to proceed without the default settings. After declining the default settings, you can configure all your PVE container variables.
+
+However, before proceeding, we highly recommend that you read our guide to fully understand the input requirements.
 
 <h4><b>Easy Script Toolbox</b></h4>
 
@@ -102,6 +102,7 @@ bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host/main/
     - [5.6. Fail2Ban Installer](#56-fail2ban-installer)
     - [5.7. SMTP Server Credentials (Recommended)](#57-smtp-server-credentials-recommended)
     - [5.8. PVE CT updater](#58-pve-ct-updater)
+    - [5.9. PVE Host Grub boot delay (recommended)](#59-pve-host-grub-boot-delay-recommended)
 - [6. Create a PVE Cluster](#6-create-a-pve-cluster)
     - [6.1. Create a Cluster](#61-create-a-cluster)
     - [6.2. Join the other Nodes to the New Cluster](#62-join-the-other-nodes-to-the-new-cluster)
@@ -438,6 +439,14 @@ But we recommend you create an account at mailgun.com to relay your NAS system e
 ## 5.8. PVE CT updater
 
 The script performs an OS update on all PVE CTs. All CTs are returned to their former run state in the background before moving on to CT.
+
+## 5.9. PVE Host Grub boot delay (recommended)
+
+All your PVE hosts depend on your NAS and other network devices such as routers, DNS, DHCP servers and LAN switches. In the event of a power outage we need your PVE hosts to be the last online.
+
+Our solution is to the edit the 'grub timeout' parameter and apply a delay of 300 seconds.
+
+Your Proxmox server now waits 5 minutes before starting the OS, by which time your NAS and network devices (i.e switches, DNS servers) should be operational. There will be no more manual restarting of virtual machines following a power outage.
 
 <hr>
 
