@@ -42,6 +42,7 @@ This setup script is for configuring 'new' PVE hosts only. Tasks to be performed
   --  Check and set Proxmox subscription key (free or enterprise)
   --  Install nbtscan SW
   --  Adjust sysctl parameters
+  --  Set PVE boot delay to 300 sec ( allows for NAS to start/online on power outage )
   --  Perform PVE container (CT) mapping ( required for all our PVE VM or CT builds )"
 echo
 while true
@@ -121,7 +122,7 @@ else
     --  Reinstall subscription key.
     --  Perform CLI 'apt-get update' and 'apt-get upgrade' and check for errors.
     --  Try restarting the PVE host.
-    --  Use the PVE WebGUI to set the update repository setting. n
+    --  Use the PVE WebGUI to set the update repository setting.
     This script will exit in 3 seconds. Complete the above tasks and try again..."
   warn "$FAIL_MSG"
   sleep 3
@@ -141,8 +142,6 @@ msg "Performing PVE clean..."
 apt-get -y clean > /dev/null 2>&1
 msg "Performing PVE autoremove..."
 apt-get -y autoremove > /dev/null 2>&1
-
-
 
 # Update turnkey appliance list
 msg "Performing turnkey appliance list updates..."
@@ -177,6 +176,13 @@ fi
 msg "Setting vzdump temporary dir variable..."
 sed -i -r '/^#?tmpdir:.*/c\tmpdir: \/tmp' /etc/vzdump.conf
 echo
+
+# Edit /etc/default/grub boot delay
+if [ -e /etc/default/grub ]; then
+  sed -i 's/GRUB_TIMEOUT=.*/GRUB_TIMEOUT=300/' /etc/default/grub
+  update-grub
+fi
+
 
 #---- PVE Container Mapping
 if [[ ! $(grep -qxF 'root:65604:100' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:100:1' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:1605:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1606:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1607:1' /etc/subuid) ]]
@@ -226,6 +232,7 @@ then
   info "User private uid mapping status: ${YELLOW}set${NC}"
   echo
 fi
+
 
 #---- Finish Line ------------------------------------------------------------------
 

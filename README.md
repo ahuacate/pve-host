@@ -23,6 +23,8 @@ Easy Script Toolbox menu includes the following tasks.
 * PVE Hostname Updater - change the hostname of a node
 * Fail2Ban Installer
 * SSMTP Email Installer
+* PVE Host Grub boot delay - set the grub boot delay
+* PVE Intel Amd iGPU LXC support - allow LXC access to CPU iGPU 
 * PVE CT updater - mass update all CT OS
 
 <h2>Prerequisites</h2>
@@ -103,10 +105,12 @@ bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host/main/
     - [5.7. SMTP Server Credentials (Recommended)](#57-smtp-server-credentials-recommended)
     - [5.8. PVE CT updater](#58-pve-ct-updater)
     - [5.9. PVE Host Grub boot delay (recommended)](#59-pve-host-grub-boot-delay-recommended)
-- [6. Create a PVE Cluster](#6-create-a-pve-cluster)
-    - [6.1. Create a Cluster](#61-create-a-cluster)
-    - [6.2. Join the other Nodes to the New Cluster](#62-join-the-other-nodes-to-the-new-cluster)
-    - [6.3. How to delete an existing cluster on a node](#63-how-to-delete-an-existing-cluster-on-a-node)
+    - [PVE Intel Amd iGPU LXC support - allow LXC access to CPU iGPU](#pve-intel-amd-igpu-lxc-support---allow-lxc-access-to-cpu-igpu)
+- [6. GitHub "ttneck" helper scripts](#6-github-ttneck-helper-scripts)
+- [7. Create a PVE Cluster](#7-create-a-pve-cluster)
+    - [7.1. Create a Cluster](#71-create-a-cluster)
+    - [7.2. Join the other Nodes to the New Cluster](#72-join-the-other-nodes-to-the-new-cluster)
+    - [7.3. How to delete an existing cluster on a node](#73-how-to-delete-an-existing-cluster-on-a-node)
 
 <!-- /TOC -->
 <hr>
@@ -448,14 +452,28 @@ Our solution is to the edit the 'grub timeout' parameter and apply a delay of 30
 
 Your Proxmox server now waits 5 minutes before starting the OS, by which time your NAS and network devices (i.e switches, DNS servers) should be operational. There will be no more manual restarting of virtual machines following a power outage.
 
+## PVE Intel Amd iGPU LXC support - allow LXC access to CPU iGPU
+Setup Intel or AMD iGPU video render to support your LXC. Required by Jellyfin and Tdarr or any LXC performing video rendering.
+
 <hr>
 
-# 6. Create a PVE Cluster
+# 6. GitHub "ttneck" helper scripts
+tneck has a lot of helpful scripts to help you with your homelab and Proxmox. More information [here](https://tteck.github.io/Proxmox/).
+
+For tuning your Proxmox hosts I use these:
+* Proxmox VE Tools
+    1. Proxmox VE Processor Microcode
+    2. Proxmox VE CPU Scaling Governor
+
+
+<hr>
+
+# 7. Create a PVE Cluster
 
 Proxmox requires a minimum of three PVE hosts on the same network to form a cluster - PVE-01, PVE-02 and PVE-03.
 
 
-## 6.1. Create a Cluster
+## 7.1. Create a Cluster
 
 Using the PVE web interface on host PVE-01, go to `Datacenter` > `Cluster` > `Create Cluster` and fill out the fields as follows:
 
@@ -466,7 +484,7 @@ Using the PVE web interface on host PVE-01, go to `Datacenter` > `Cluster` > `Cr
 
 And Click `Create`.
 
-## 6.2. Join the other Nodes to the New Cluster
+## 7.2. Join the other Nodes to the New Cluster
 
 The first step in joining other nodes to your cluster, `pve-cluster`, is to copy PVE-01 cluster manager fingerprint/join information into your clipboard.
 
@@ -511,7 +529,7 @@ Membership information
 0x00000003          1 192.168.1.103
 ```
 
-## 6.3. How to delete an existing cluster on a node
+## 7.3. How to delete an existing cluster on a node
 
 If you make a mistake when setting up your cluster the following should reset your cluster settings to the PVE default.
 
