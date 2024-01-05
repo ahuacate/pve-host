@@ -42,6 +42,7 @@ This setup script is for configuring 'new' PVE hosts only. Tasks to be performed
   --  Check and set Proxmox subscription key (free or enterprise)
   --  Install nbtscan SW
   --  Adjust sysctl parameters
+  --  Set /etc/vzdump.conf tmp dir to /tmp ( fixes nfs PVE backup errors )
   --  Set PVE boot delay to 300 sec ( allows for NAS to start/online on power outage )
   --  Perform PVE container (CT) mapping ( required for all our PVE VM or CT builds )"
 echo

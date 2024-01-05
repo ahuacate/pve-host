@@ -29,6 +29,8 @@ Easy Script Toolbox menu includes the following tasks.
 
 <h2>Prerequisites</h2>
 
+Read about our <a href="https://github.com/ahuacate/common/tree/main/pve/src/local_about_our_build.md" target="_blank">system-wide requirements</a> before proceeding any further.
+
 **Network Prerequisites**
 Network prerequisites are:
 - [x] Layer 2/3 Network Switches
@@ -105,12 +107,14 @@ bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host/main/
     - [5.7. SMTP Server Credentials (Recommended)](#57-smtp-server-credentials-recommended)
     - [5.8. PVE CT updater](#58-pve-ct-updater)
     - [5.9. PVE Host Grub boot delay (recommended)](#59-pve-host-grub-boot-delay-recommended)
-    - [PVE Intel Amd iGPU LXC support - allow LXC access to CPU iGPU](#pve-intel-amd-igpu-lxc-support---allow-lxc-access-to-cpu-igpu)
+    - [5.10. PVE Intel Amd iGPU LXC support - allow LXC access to CPU iGPU](#510-pve-intel-amd-igpu-lxc-support---allow-lxc-access-to-cpu-igpu)
 - [6. GitHub "ttneck" helper scripts](#6-github-ttneck-helper-scripts)
 - [7. Create a PVE Cluster](#7-create-a-pve-cluster)
     - [7.1. Create a Cluster](#71-create-a-cluster)
     - [7.2. Join the other Nodes to the New Cluster](#72-join-the-other-nodes-to-the-new-cluster)
     - [7.3. How to delete an existing cluster on a node](#73-how-to-delete-an-existing-cluster-on-a-node)
+- [8. Troubleshooting](#8-troubleshooting)
+    - [8.1. Proxmox VZdump backup write errors to NAS](#81-proxmox-vzdump-backup-write-errors-to-nas)
 
 <!-- /TOC -->
 <hr>
@@ -307,9 +311,9 @@ Create a dedicated VLAN2 network for pfSense WAN only (labeled VPN-egress). All 
 
 Navigate using the UniFi controller web interface to `Settings` > `Networks` > `Create New Network` and complete as follows.
 
-| Description | LAN-egress
+| Description | VPN-egress
 | :---  | :---
-| Network Name |`LAN-egress`
+| Network Name |`VPN-egress`
 | GatewayIP/Subnet | `☐` Auto Scale Network
 || `192.168.2.5/28`
 | **Advanced Configuration** | `manual`
@@ -339,7 +343,7 @@ What important is the UniFi `Port Profile` of your selected NIC port must be ass
 ![alt text](./images/UniFi-Devices-Port_Management-pvelan.png)
 
 ### 3.2.2. Assign switch port to WAN VLAN2
-Navigate using the UniFi controller web interface to `Devices` > `Select switch device` > `Port Management` and then select the switch port which is physically connected and assigned to pfSense as WAN (vpn-egress).
+Navigate using the UniFi controller web interface to `Devices` > `Select switch device` > `Port Management` and then select the switch port which is physically connected and assigned to pfSense as WAN (VPN-egress).
 
 My pfSense "WAN" is a port aggregate of UniFi NIC ports 3 & 4 which is not a requirement.
 
@@ -446,19 +450,19 @@ The script performs an OS update on all PVE CTs. All CTs are returned to their f
 
 ## 5.9. PVE Host Grub boot delay (recommended)
 
-All your PVE hosts depend on your NAS and other network devices such as routers, DNS, DHCP servers and LAN switches. In the event of a power outage we need your PVE hosts to be the last online.
+All your PVE hosts depend on your NAS and other network devices such as routers, DNS, DHCP servers and LAN switches. In the event of a power outage, we need your PVE hosts to be the last online.
 
-Our solution is to the edit the 'grub timeout' parameter and apply a delay of 300 seconds.
+Our solution is to edit the 'grub timeout' parameter and apply a delay of 300 seconds.
 
 Your Proxmox server now waits 5 minutes before starting the OS, by which time your NAS and network devices (i.e switches, DNS servers) should be operational. There will be no more manual restarting of virtual machines following a power outage.
 
-## PVE Intel Amd iGPU LXC support - allow LXC access to CPU iGPU
+## 5.10. PVE Intel Amd iGPU LXC support - allow LXC access to CPU iGPU
 Setup Intel or AMD iGPU video render to support your LXC. Required by Jellyfin and Tdarr or any LXC performing video rendering.
 
 <hr>
 
 # 6. GitHub "ttneck" helper scripts
-tneck has a lot of helpful scripts to help you with your homelab and Proxmox. More information [here](https://tteck.github.io/Proxmox/).
+tneck has a lot of helpful scripts to help you with your Homelab and Proxmox. More information [here](https://tteck.github.io/Proxmox/).
 
 For tuning your Proxmox hosts I use these:
 * Proxmox VE Tools
@@ -547,4 +551,37 @@ systemctl restart pveproxy
 systemctl restart pvestatd
 reboot
 ```
+<hr>
+
+# 8. Troubleshooting
+## 8.1. Proxmox VZdump backup write errors to NAS
+If you experience permission errors or encounter failures when PVE (Proxmox Virtual Environment) attempts to write temporary files during the creation of a container backup, the issue may be attributed to permission problems when PVE generates temporary files. To resolve this, execute the following command on all PVE hosts:
+
+```
+# Set /etc/vzdump.conf tmp dir
+sed -i -r '/^#?tmpdir:.*/c\tmpdir: \/tmp' /etc/vzdump.conf
+```
+
+Or you could edit the `/etc/vzdump.conf` using nano:
+```
+tmpdir: /tmp
+#dumpdir: DIR
+#storage: STORAGE_ID
+#mode: snapshot|suspend|stop
+#bwlimit: KBPS
+#performance: [max-workers=N][,pbs-entries-max=N]
+#ionice: PRI
+#lockwait: MINUTES
+#stopwait: MINUTES
+#stdexcludes: BOOLEAN
+#mailto: ADDRESSLIST
+#prune-backups: keep-INTERVAL=N[,...]
+#script: FILENAME
+#exclude-path: PATHLIST
+#pigz: N
+#notes-template: {{guestname}}
+```
+
+This patch may be overwritten when performing a Proxmox release upgrade requiring you to patch the file.
+
 <hr>
