@@ -113,7 +113,7 @@ bash -c "$(wget -qLO - https://raw.githubusercontent.com/ahuacate/pve-host/main/
     - [7.1. Create a Cluster](#71-create-a-cluster)
     - [7.2. Join the other Nodes to the New Cluster](#72-join-the-other-nodes-to-the-new-cluster)
     - [7.3. How to delete an existing cluster on a node](#73-how-to-delete-an-existing-cluster-on-a-node)
-- [8. Troubleshooting](#8-troubleshooting)
+- [8. Fixes, patches & Troubleshooting](#8-fixes-patches--troubleshooting)
     - [8.1. Proxmox VZdump backup write errors to NAS](#81-proxmox-vzdump-backup-write-errors-to-nas)
 
 <!-- /TOC -->
@@ -553,7 +553,7 @@ reboot
 ```
 <hr>
 
-# 8. Troubleshooting
+# 8. Fixes, patches & Troubleshooting
 ## 8.1. Proxmox VZdump backup write errors to NAS
 If you experience permission errors or encounter failures when PVE (Proxmox Virtual Environment) attempts to write temporary files during the creation of a container backup, the issue may be attributed to permission problems when PVE generates temporary files. To resolve this, execute the following command on all PVE hosts:
 
