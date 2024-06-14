@@ -185,6 +185,12 @@ if [ -e /etc/default/grub ]; then
 fi
 
 
+#---- Additional folders
+
+# Create snippets folder
+mkdir -p /var/lib/vz/snippets 
+
+
 #---- PVE Container Mapping
 if [[ ! $(grep -qxF 'root:65604:100' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:100:1' /etc/subgid) ]] && [[ ! $(grep -qxF 'root:1605:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1606:1' /etc/subuid) ]] && [[ ! $(grep -qxF 'root:1607:1' /etc/subuid) ]]
 then
