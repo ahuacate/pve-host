@@ -9,8 +9,7 @@
 #---- Dependencies -----------------------------------------------------------------
 
 # nbtscan
-if [ ! $(dpkg -s nbtscan >/dev/null 2>&1; echo $?) = 0 ]
-then
+if [ ! $(dpkg -s nbtscan >/dev/null 2>&1; echo $?) = 0 ]; then
   apt-get install nbtscan -yqq
 fi
 
@@ -20,8 +19,7 @@ fi
 SECTION_HEAD='PVESM CIFS Storage Mounts'
 
 # Check for PVE Hostname mod
-if [ -z "${HOSTNAME_FIX+x}" ]
-then
+if [ -z "${HOSTNAME_FIX+x}" ]; then
   PVE_HOSTNAME=$HOSTNAME
 fi
 
@@ -33,16 +31,15 @@ fi
 section "Introduction"
 
 msg_box "#### PLEASE READ CAREFULLY - NAS CIFS SERVER EXPORTS ####\n
-Your NAS server SMB/CIFS properties must be configured so your PVE CIFS backend (client) can mount the SMB/CIFS shares automatically. Your SMB/CIFS server should support SMB3 protocol (PVE default). SMB1 is NOT supported. Your NAS server should support:
+NAS server's SMB/CIFS properties must be configured so your Proxmox VE (PVE) CIFS backend (client) can automatically mount the SMB/CIFS shares. The SMB/CIFS server should support the SMB3 protocol (PVE default). SMB1 is NOT supported. Your NAS server should support:
 
   SMB VERSION
-    --  SMB v2.02 minimum ( PVE default is v3.00 and above )
-  
-    --  NAS SMB shares to all PVE nodes (i.e default PVE nodes are 'nas-01' to 'nas-05' or '192.168.1.101' to '192.168.1.105')
+    --  Minimum SMB v2.02 (PVE default is v3.00 and above)
+    --  NAS SMB shares accessible to all PVE nodes (default PVE nodes are 'nas-01' to 'nas-05' or '192.168.1.101' to '192.168.1.105')
 
-The User is required to input a valid NAS user SMB credentials (username and password). The login user must have suitable permissions (i.e privatelab:rwx) to acccess, read, write and execute to the SMB server shares you wish to mount. If you have more than one SMB/CIFS Server and/or SMB login username account then run this script again for each SMB/CIFS Server IP and SMB login username.
+The user must input valid NAS user SMB credentials (username and password). The login user must have appropriate permissions (e.g., privatelab) to access, read, write, and execute the SMB server shares you wish to mount. If you have multiple SMB/CIFS servers and/or SMB login username accounts, run this script again for each SMB/CIFS server IP and SMB login username.
 
-The next steps requires user input. You can accept our default values by pressing ENTER on your keyboard. Or overwrite our default value by typing in your own value and then pressing ENTER to accept and to continue to the next step."
+The next steps require user input. You can accept the default values by pressing ENTER, or you can overwrite the default values by typing in your own value and pressing ENTER to continue to the next step."
 echo
 while true
 do
@@ -70,8 +67,7 @@ done
 section "Check Prerequisites"
 
 # nbtscan SW
-if [[ ! $(dpkg -s nbtscan) ]]
-then
+if [[ ! $(dpkg -s nbtscan) ]]; then
   msg "Installing nbtscan..."
   apt-get install -y nbtscan > /dev/null
   info "nbtscan status: ${GREEN}installed${NC}"
@@ -86,71 +82,64 @@ while true
 do
   read -p "Enter your NAS Server IPv4/6 address OR hostname: " -e -i nas-01 NAS_ID
   msg "Checking for a working CIFS NAS server..."
-  if [ "$(valid_ip "$NAS_ID" > /dev/null 2>&1; echo $?)" = 0 ]
-  then
-    # Perform ping check
-    if [ "$(ping -s 1 -c 2 "$(echo "${NAS_ID}")" > /dev/null; echo $?)" = 0 ]
-    then
+  if [ "$(valid_ip "$NAS_ID" > /dev/null 2>&1; echo $?)" = 0 ]; then
+    # Perform IP ping check
+    if [ "$(ping -s 1 -c 2 "$(echo "$NAS_ID")" > /dev/null; echo $?)" = 0 ]; then
       NAS_IP="$NAS_ID"
-      info "Ping '${NAS_ID}' status: ${YELLOW}pass${NC}"
+      info "Ping '$NAS_ID' status: ${YELLOW}pass${NC}"
       info "NAS IP status: ${YELLOW}pass${NC} ( $NAS_IP )"
     else
       NAS_IP=""
-      info "Ping '${NAS_ID}' status: ${RED}fail${NC}"
+      info "Ping '$NAS_ID' status: ${RED}fail${NC}"
       info "NAS IP status: ${RED}fail${NC}"
     fi
+
     # Perform hostname check
-    if [[ $(nbtscan -q $NAS_ID | awk '{print $2}') ]]
-    then
+    if [[ $(nbtscan -q $NAS_ID | awk '{print $2}') ]]; then
       NAS_HOSTNAME="$(nbtscan -q $NAS_ID | awk '{print $2}')" 
       info "NAS hostname status: ${YELLOW}pass${NC} ( $NAS_HOSTNAME )"
     else
       NAS_HOSTNAME=""
       info "NAS hostname status: ${RED}fail${NC} ( cannot map hostname )"
     fi
-  elif [[ "$NAS_ID" =~ ${hostname_regex} ]]
-  then
-    # Perform ping check
-    if [ "$(ping -s 1 -c 2 "$(echo "${NAS_ID}")" > /dev/null; echo $?)" = 0 ]
-    then
+  elif [[ "$NAS_ID" =~ ${hostname_regex} ]]; then
+    # Perform hostname ping check
+    if [ "$(ping -s 1 -c 2 "$(echo "$NAS_ID")" > /dev/null; echo $?)" = 0 ]; then
       NAS_HOSTNAME="$NAS_ID"
-      info "Ping '${NAS_ID}' status: ${YELLOW}pass${NC}"
+      info "Ping '$NAS_ID' status: ${YELLOW}pass${NC}"
       info "NAS hostname status: ${YELLOW}pass${NC} ( $NAS_HOSTNAME )"
     else
       NAS_HOSTNAME=""
-      info "Ping '${NAS_ID}' status: ${RED}fail${NC}"
+      info "Ping '$NAS_ID' status: ${RED}fail${NC}"
       info "NAS hostname status: ${RED}fail${NC}"
     fi
-    # Perform IP check
-    if [[ $(nslookup "${NAS_ID}" | awk '/^Address: / { print $2 }') ]]
-    then
-      NAS_IP="$(nslookup "$NAS_ID" | awk '/^Address: / { print $2 }') "
-      info "NAS IP status: ${YELLOW}pass${NC} ( $NAS_IP )"
+
+    # Perform IP lookup using hostname
+    if [[ $(nslookup "${NAS_ID}" | awk '/^Address: / { print $2 }') ]]; then
+      NAS_IP="$(nslookup "$NAS_ID" | awk '/^Address: / { print $2 }')" 
+      info "NAS IP lookup status: ${YELLOW}pass${NC} ( $NAS_IP )"
     else
       NAS_IP=""
-      info "NAS IP status: ${RED}fail${NC} ( cannot map IP address )"
+      info "NAS IP lookup status: ${RED}fail${NC} ( cannot map IP address )"
     fi
   fi
 
-  # CIFS IP server status
-  if [[ $(nc -z ${NAS_IP} 139 && echo up) ]] && [ -n "${NAS_IP}" ]
-  then
-    # '0' enabled, '1' disabled
-    CIFS_EXPORT_IP=0
+  # CIFS IP server status ('0' enabled, '1' disabled)
+  if [[ $(nc -z ${NAS_IP} 139 && echo up) ]] && [ -n "${NAS_IP}" ]; then
+    CIFS_EXPORT_IP=0 # '0' enabled, '1' disabled
   else
-    CIFS_EXPORT_IP=1
+    CIFS_EXPORT_IP=1 # '0' enabled, '1' disabled
   fi
-  # CIFS DHCP server status
-  if [[ $(nc -z ${NAS_HOSTNAME} 139 && echo up) ]] && [ -n "${NAS_HOSTNAME}" ]
-  then
-    # '0' enabled, '1' disabled
-    CIFS_EXPORT_DHCP=0
+
+  # CIFS DHCP server status ('0' enabled, '1' disabled)
+  if [[ $(nc -z ${NAS_HOSTNAME} 139 && echo up) ]] && [ -n "${NAS_HOSTNAME}" ]; then
+    CIFS_EXPORT_DHCP=0 # '0' enabled, '1' disabled
   else
-    CIFS_EXPORT_DHCP=1
+    CIFS_EXPORT_DHCP=1 # '0' enabled, '1' disabled
   fi
+
   # Check
-  if [ "$CIFS_EXPORT_DHCP" = 0 ] || [ "$CIFS_EXPORT_IP" = 0 ]
-  then
+  if [ "$CIFS_EXPORT_DHCP" = 0 ] || [ "$CIFS_EXPORT_IP" = 0 ]; then
     break
   else
     warn "There are problems with your input:
@@ -162,20 +151,28 @@ do
 done
 
 # Set SMB version
-msg "Confirming NAS Samba version..."
+msg "Confirming NAS SMB version..."
+
+# Define the minimum SMB version required
 SMB_VER_MIN='2.02'
-SMB_VERS=$(nmap --script smb-protocols ${NAS_IP} | grep \| | sed 's/[^0-9]*//' | sed '/^$/d' | sort -n | tail -1)
-if [[ ${SMB_VERS} > ${SMB_VER_MIN} ]]
-then
-  NAS_SMB_VER="$SMB_VERS"
-  MAN_SET_SMB_VERS=1
-  info "NAS SMB Version is set: ${YELLOW}SMB${NAS_SMB_VER}${NC}"
+# Run the nmap command and extract the highest SMB protocol version
+SMB_VER_SERVER=$(nmap --script smb-protocols ${NAS_IP} | grep \| | sed 's/[^0-9]*//' | sed '/^$/d' | sort -n | tail -1)
+# Check if SMB_VER_SERVER is not empty
+if [ -n "$SMB_VER_SERVER" ]; then
+  # Compare the obtained SMB version with the minimum required version
+  if [[ ${SMB_VER_SERVER} > ${SMB_VER_MIN} ]]; then
+    NAS_SMB_VER="$SMB_VER_SERVER"
+    MAN_SET_SMB_VER=1
+    info "NAS SMB Version is set: ${YELLOW}SMB${NAS_SMB_VER}${NC}"
+  else
+    MAN_SET_SMB_VER=0
+  fi
 else
-  MAN_SET_SMB_VERS=0
+  MAN_SET_SMB_VER=0
+  info "Failed to determine the SMB version from the NAS."
 fi
 
-if [ "$MAN_SET_SMB_VERS" = 0 ]
-then
+if [ "$MAN_SET_SMB_VER" -eq 0 ]; then
   msg_box "#### PLEASE READ CAREFULLY - SMB VERSION ####\n
   There are issues with determining the NAS server SMB protocol dialect (version). Proxmox requires a minimum SMB 2.02v. Check your NAS server SMB version support. If a firewall is blocking the SMB version broadcast then manually select the NAS SMB version."
   OPTIONS_VALUES_INPUT=( "TYPE01" "TYPE02" "TYPE03" "TYPE04" "TYPE05" "TYPE00")
@@ -200,35 +197,33 @@ then
   fi
 fi
 
-# Set NAS Hostname or Static IP
-if [ "$CIFS_EXPORT_DHCP" = 0 ] && [ "$CIFS_EXPORT_IP" = 0 ]
-then
+#---- Select CIFS mount protocol (IP or hostname)
+if [ "$CIFS_EXPORT_DHCP" -eq 0 ] && [ "$CIFS_EXPORT_IP" -eq 0 ]; then
   msg_box "#### PLEASE READ CAREFULLY - NAS CIFS SERVER EXPORTS BY PROTOCOL ####\n\nNAS CIFS exports can be mounted using either the NAS IP address or NAS hostname protocol.\n\nSelect your preferred NAS CIFS export protocol. Hostname protocol is recommended."
   echo
   OPTIONS_VALUES_INPUT=( "TYPE01" "TYPE02" "TYPE00")
   OPTIONS_LABELS_INPUT=( "Hostname - CIFS by hostname '${NAS_HOSTNAME}' (Recommended)" "IP address - CIFS by static IP '${NAS_IP}'" "None. Return to the Toolbox" )
   makeselect_input2
   singleselect SELECTED "$OPTIONS_STRING"
-  # Set the NFS protocol
+
+  # Set the CIFS protocol from menu
   if [ "$RESULTS" = 'TYPE01' ]; then
-    # Set NFS by hostname
+    # Set CIFS by hostname
     NAS_ID="$NAS_HOSTNAME"
     info "NAS CIFS export mount protocol set: ${YELLOW}$NAS_ID${NC} (by hostname)"
   elif [ "$RESULTS" = 'TYPE02' ]; then
-    # Set NFS by IP
+    # Set CIFS by IP
     NAS_ID="$NAS_IP"
     info "NAS CIFS export mount protocol set: ${YELLOW}$NAS_ID${NC} (by IP)"
   elif [ "$RESULTS" = 'TYPE00' ]; then
     return
   fi
-elif [ "$CIFS_EXPORT_DHCP" = 0 ] && [ "$CIFS_EXPORT_IP" = 1 ]
-then
-  # Set NFS by hostname
+elif [ "$CIFS_EXPORT_DHCP" -eq 0 ] && [ "$CIFS_EXPORT_IP" -eq 1 ]; then
+  # Set CIFS by hostname
   NAS_ID="$NAS_HOSTNAME"
   info "NAS CIFS export mount protocol set: ${YELLOW}$NAS_ID${NC} (by hostname)"
-elif [ "$CIFS_EXPORT_DHCP" = 1 ] && [ "$CIFS_EXPORT_IP" = 0 ]
-then
-  # Set NFS by hostname
+elif [ "$CIFS_EXPORT_DHCP" -eq 1 ] && [ "$CIFS_EXPORT_IP" -eq 0 ]; then
+  # Set CIFS by hostname
   NAS_ID="$NAS_IP"
   info "NAS CIFS export mount protocol set: ${YELLOW}$NAS_ID${NC} (by IP)"
 fi
@@ -258,18 +253,15 @@ do
         read -p "Enter Password (again): " SMB_PASSWORD2
         echo
         # Test SMB connection
-        if [ "$SMB_PASSWORD" != "$SMB_PASSWORD2" ]
-        then
+        if [ "$SMB_PASSWORD" != "$SMB_PASSWORD2" ]; then
           warn "Passwords do not match. Please try again."
           echo
-        elif [ ! "$(pvesm scan cifs $NAS_ID --username $SMB_USERNAME --password $SMB_PASSWORD &> /dev/null; echo $?)" = 0 ]
-        then
+        elif [ ! "$(pvesm scan cifs $NAS_ID --username $SMB_USERNAME --password $SMB_PASSWORD &> /dev/null; echo $?)" -eq 0 ]; then
           # Fail msg
           FAIL_MSG="The user name credentials are not valid.\nTry again..."
           warn "$FAIL_MSG"
           echo
-        elif [ "$(pvesm scan cifs $NAS_ID --username $SMB_USERNAME --password $SMB_PASSWORD &> /dev/null; echo $?)" = 0 ]
-        then
+        elif [ "$(pvesm scan cifs $NAS_ID --username $SMB_USERNAME --password $SMB_PASSWORD &> /dev/null; echo $?)" -eq 0 ]; then
           info "SMB server login credentials are set: ${YELLOW}$SMB_USERNAME${NC} ( username )"
           echo
           break 2
@@ -280,8 +272,7 @@ do
       SMB_CREDENTIALS=1
       SMB_USERNAME=""
       SMB_PASSWORD=""
-      if [ ! "$(pvesm scan cifs $NAS_ID --username $SMB_USERNAME --password $SMB_PASSWORD &> /dev/null; echo $?)" = 0 ]
-      then
+      if [ ! "$(pvesm scan cifs $NAS_ID --username $SMB_USERNAME --password $SMB_PASSWORD &> /dev/null; echo $?)" -eq 0 ]; then
         # Fail msg
         FAIL_MSG="User name credentials appear to be required for the NAS SMB/CIFS Server.\nTry again..."
         warn "$FAIL_MSG"
@@ -301,13 +292,11 @@ done
 
 
 # Manually set NAS hostname (required because nbtscan failed to get the NAS hostname using the NAS IP )
-if [ -z ${NAS_HOSTNAME} ]
-then
+if [ -z ${NAS_HOSTNAME} ]; then
   msg "For unknown reasons we could not determine the hostname the NAS server '${NAS_IP}'. The user must manually enter the NAS hostname at the prompt."
   while true; do
     read -p "Enter your NAS CIFS Server '${NAS_IP}' hostname: " -e -i $(nslookup ${NAS_IP} | awk 'sub(/.*name =/,""){print $1}' | sed 's/\..*//') NAS_HOSTNAME_VAR
-    if [[ "$NAS_HOSTNAME_VAR" =~ ${hostname_regex} ]]
-    then
+    if [[ "$NAS_HOSTNAME_VAR" =~ ${hostname_regex} ]]; then
       NAS_HOSTNAME="$NAS_HOSTNAME_VAR"
       info "NAS hostname set: ${YELLOW}$NAS_HOSTNAME${NC}"
       echo
@@ -327,37 +316,36 @@ then
 fi
 
 
-#---- Create PVE Storage Mounts
+#---- Create CIFS mount pairs
 section "Create PVE Storage Mounts"
 
-# Create CIFS Server export list
+# Get CIFS NAS Server export list
 mapfile -t cifs_server_LIST <<< $(pvesm scan cifs $NAS_ID --username $SMB_USERNAME --password $SMB_PASSWORD | awk '{ print $1 }' | sort | uniq | sed "/.*\/backup$/d" | sed '/^backup/d' | sed 's/proxmox$/proxmox\/backup/g' | sed 's/[[:blank:]]*$//' | sed '/^$/d') # Removing backup dir, editing /src/proxmox/'backup'
 # Create required pvesm list
 mapfile -t pvesm_req_LIST <<< $(cat $SHARED_DIR/src/pve_host_mount_list | sed '/^#/d' | awk -F':' '$3 == "0" { print $1 }' | awk '{ print tolower ($1) }' | sed '/^$/d' | sed 's/[[:blank:]]*$//' | sed '/^$/d')
 
 
-# Create cifs exports vs required match list
+# Match cifs exports vs required match list 
+# Here we match our default list pf PVESM mounts "${pvesm_req_LIST[@]}" against your SMB/CIFS Server exports "${cifs_server_LIST[@]}", removing any existing matching PVE NFS/CIF mounts to avoid conflicts.
 # 1=src:2=pvesm name:3=media type:4=status (0 existing, 1 required,):5=format(nfs,cifs)
 msg "Creating a list of CIFS Server '${NAS_ID}' exports and performing match (be patient, might take a while)..."
 unset match_LIST
 while IFS= read -r line
 do
-  if [ "$(printf '%s\n' "${cifs_server_LIST[@]}" | grep -s "\.*${line}$" > /dev/null; echo $?)" = 0 ]
-  then
+  if [ "$(printf '%s\n' "${cifs_server_LIST[@]}" | grep -s "\.*${line}$" > /dev/null; echo $?)" -eq 0 ]; then
     match_LIST+=( "$(printf '%s\n' "${cifs_server_LIST[@]}" | grep -s "\.*${line}$"):$(echo "${NAS_HOSTNAME,,}-${line}":${line}:$(if [[ $(pvesm status | grep -E 'nfs|cifs' | tr '[:upper:]' '[:lower:]' | grep "^${NAS_HOSTNAME,,}-${line}") ]]; then pvesm status | grep -E 'nfs|cifs' | tr '[:upper:]' '[:lower:]' | grep "^${NAS_HOSTNAME,,}-${line}" | awk '{ print "0:"$2 }'; else echo "1:"; fi))" )
   fi
 done < <( printf '%s\n' "${pvesm_req_LIST[@]}" )
+
 while IFS= read -r line
 do
-  if [ ! "$(printf '%s\n' "${match_LIST[@]}" | grep -s "^${line}" > /dev/null; echo $?)" = 0 ]
-  then
+  if [ ! "$(printf '%s\n' "${match_LIST[@]}" | grep -s "^${line}" > /dev/null; echo $?)" -eq 0 ]; then
     match_LIST+=( "${line}::::" )
   fi
 done < <( printf '%s\n' "${cifs_server_LIST[@]}" )
 
-# Auto select and label of exports
-if [ "$(printf '%s\n' "${match_LIST[@]}" | awk -F':' '{OFS=FS} { if (($4 == 0 || $4 == 1)) print $0 }' | wc -l)" = ${#pvesm_req_LIST[@]} ]
-then
+# Auto select and label exports
+if [ "$(printf '%s\n' "${match_LIST[@]}" | awk -F':' '{OFS=FS} { if (($4 == 0 || $4 == 1)) print $0 }' | wc -l)" = ${#pvesm_req_LIST[@]} ]; then
   # Auto selection and labelling of exports
   msg_box "#### AUTOMATIC PVE STORAGE MOUNT MATCHING ####\n\nWe have discovered and matched all the required PVE storage mounts. Any conflicting or existing mount points are excluded. Only mounts labeled 'required' will be created. This should work 'out-of-the-box'.\n\n$(printf '%s\n' "${match_LIST[@]}" | awk -F':' '{OFS=FS} { if ($4 == 0) print $1,"<<",$2,$5} { if ($4 == 1) print $1,"<<",$2,"required"}' | column -s ":" -t -N "SOURCE INPUT, ,PVESM LABEL,MOUNT STATUS" | indent2)\n\nAccept the auto match list by typing 'y' at the next prompt. Or manually select and match each PVE mount point(s) you want by entering 'n' at the next prompt."
   echo
@@ -389,8 +377,7 @@ else
 fi
 
 # Manual selection and labelling of exports
-if [ "$ES_LIST" = 1 ]
-then
+if [ "$ES_LIST" -eq 1 ]; then
   # Create required manual lists
   unset options_values_input_LIST
   unset options_labels_input_LIST
@@ -443,14 +430,12 @@ then
 fi
 
 
-# Create PVE Storage Mounts
-if [ ${#input_LIST[@]} -ge 1 ]
-then
+#---- Create PVE Storage Mounts
+if [ ${#input_LIST[@]} -ge 1 ]; then
   while IFS=':' read -r SHARE TYPE
   do
-    PVESM_LABEL="${NAS_HOSTNAME,,}-${TYPE}"
-    if [ "${PVESM_LABEL}" = "$(echo ${NAS_HOSTNAME,,}-backup)" ]
-    then
+    PVESM_LABEL="${NAS_HOSTNAME,,}-${TYPE}" # Set PVESM share label name
+    if [ "${PVESM_LABEL}" = "$(echo ${NAS_HOSTNAME,,}-backup)" ]; then
       msg "Creating PVE storage mount..."
       pvesm add cifs $PVESM_LABEL --server $NAS_ID --path /mnt/pve/$PVESM_LABEL --share $SHARE --content backup --maxfiles 3 --smbversion $NAS_SMB_VER $(if [ "$SMB_CREDENTIALS" = 0 ]; then echo "--username $SMB_USERNAME --password $SMB_PASSWORD";fi)
       info "PVE storage mount created: ${YELLOW}$PVESM_LABEL${NC}\n       (${NAS_ID}:${SHARE})"
@@ -463,7 +448,7 @@ then
     fi
   done < <( printf '%s\n' "${input_LIST[@]}" )
 else
-  msg "No PVE storage mounts to create."
+  msg "It seems you already have all the required CIFS PVE storage mounts. No additional PVE storage mounts will ne created."
   echo
 fi
 #---- Finish Line ------------------------------------------------------------------
